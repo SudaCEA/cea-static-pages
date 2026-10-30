@@ -1,0 +1,21 @@
+# Build output
+/dist/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local-only references and agent/tool state
+.ref/
+.dsh/
+.opencode/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,1320 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mirror.js — full-page SVG / WebGL lab</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23080a09'/%3E%3Crect x='10' y='10' width='44' height='44' fill='none' stroke='%23d84a33'/%3E%3Cpath d='M20 20h24v24H20z' fill='none' stroke='%23e8dfca'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#080a09;
+    --stage:#121713;
+    --fg:#dfe7de;
+    --muted:#7e8a80;
+    --line:#27302a;
+    --red:#d84a33;
+    --mono:"SFMono-Regular","Cascadia Mono","Roboto Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    overflow:hidden;
+    background:var(--bg);
+    color:var(--fg);
+    font:9px/1.55 var(--mono);
+    letter-spacing:.1em;
+  }
+
+  /* The container now fills the viewport; mirror.js fills this stage. */
+  .stage{
+    position:fixed;
+    inset:0;
+    background:var(--stage);
+    overflow:hidden;
+  }
+
+  /* The module's frame is a size container, so the lab art scales with it. */
+  .mirror-content{container-type:size}
+
+  /* This is the real content. mirror.js moves it into its own frame. */
+  .art{
+    --art-border:.333cqw;
+    position:relative;
+    width:100%;
+    height:100%;
+    background:#f2efe6;
+    color:#0b0d0d;
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    /* Keep the border visible but let the effect canvas paint into it. */
+    overflow:clip;
+    overflow-clip-margin:var(--art-border);
+    border:var(--art-border) solid #0b0d0d;
+  }
+  .mouse-fx{
+    position:absolute;
+    inset:calc(0px - var(--art-border));
+    width:calc(100% + var(--art-border) + var(--art-border));
+    height:calc(100% + var(--art-border) + var(--art-border));
+    display:block;
+    z-index:0;
+    pointer-events:none;
+  }
+  .art .grid{
+    position:absolute;
+    inset:0;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 5.167%, rgba(10,14,11,.16) 5.167% 5.333%),
+      repeating-linear-gradient(0deg, transparent 0 8.611%, rgba(10,14,11,.16) 8.611% 8.889%);
+  }
+  .art .frame{position:absolute;inset:3cqw;border:.333cqw solid #0b0d0d}
+  .art .title{
+    position:absolute;left:6.333cqw;top:12.222cqh;
+    font-size:clamp(26px, min(9cqw, 15cqh), 64px);
+    line-height:.92;letter-spacing:.02em;
+  }
+  .art .cn{
+    position:absolute;left:7cqw;top:42.778cqh;
+    font-family:"Songti SC","SimSun",serif;
+    font-size:clamp(22px, min(6cqw, 10cqh), 42px);
+    letter-spacing:.2em;
+  }
+  .art .meta{
+    position:absolute;left:6.667cqw;right:6.667cqw;bottom:7.778cqh;
+    display:flex;justify-content:space-between;
+    font:clamp(6px, min(1.5cqw, 2.5cqh), 10px)/1.5 var(--mono);letter-spacing:.16em;
+  }
+  .art .redline{position:absolute;left:3cqw;right:3cqw;top:50%;border-top:1px solid var(--red);opacity:.7}
+  .art .barcode{
+    position:absolute;left:3cqw;right:3cqw;bottom:5cqh;
+    height:clamp(8px, min(3.333cqh, 2cqw), 12px);
+    background:repeating-linear-gradient(90deg,#0b0d0d 0 1px,transparent 1px 4px,#0b0d0d 4px 6px,transparent 6px 9px);
+  }
+  .panel{
+    position:absolute;left:55cqw;top:51.667cqh;width:min(37cqw, 66cqh);
+    padding:1.667cqw;border:1px solid #0b0d0d;
+    background:rgba(255,255,255,.62);
+    font-family:var(--mono);
+    font-size:clamp(6px, min(1.333cqw, 2.222cqh), 9px);
+    letter-spacing:.04em;
+    color:#0b0d0d;
+  }
+  .panel-k{
+    font-size:clamp(5px, min(1.167cqw, 1.944cqh), 8px);
+    letter-spacing:.16em;margin-bottom:1cqw;color:rgba(11,13,13,.55);
+  }
+  .hit-btn{
+    display:block;width:100%;padding:1.167cqw 1.333cqw;border:1px solid #0b0d0d;
+    background:#0b0d0d;color:#f2efe6;
+    font:clamp(6px, min(1.5cqw, 2.5cqh), 10px)/1 var(--mono);
+    letter-spacing:.12em;cursor:pointer;
+  }
+  .hit-input{
+    display:block;width:100%;margin-top:1cqw;padding:.833cqw 1cqw;
+    border:1px solid rgba(11,13,13,.35);background:#f8f5eb;
+    font:clamp(6px, min(1.5cqw, 2.5cqh), 10px)/1.2 var(--mono);
+    letter-spacing:.04em;color:#0b0d0d;
+  }
+  .hit-toggle{
+    display:block;width:100%;margin-top:1cqw;padding:1cqw 1.333cqw;
+    border:1px solid #0b0d0d;background:transparent;color:#0b0d0d;
+    font:clamp(6px, min(1.5cqw, 2.5cqh), 10px)/1 var(--mono);
+    letter-spacing:.12em;text-align:left;cursor:pointer;
+  }
+  .hit-toggle.on{background:#0b0d0d;color:#f2efe6}
+  .hit-local{
+    margin-top:1cqw;
+    font-size:clamp(5px, min(1.167cqw, 1.944cqh), 8px);
+    color:rgba(11,13,13,.55);white-space:nowrap;overflow:hidden;
+  }
+
+  /* Floating tuning panel, outside the mirror container. */
+  .panel-ui{
+    position:fixed;
+    top:16px;
+    right:16px;
+    z-index:50;
+    width:min(320px, calc(100vw - 32px));
+    max-height:calc(100vh - 32px);
+    display:flex;
+    flex-direction:column;
+    border:1px solid #3a463c;
+    background:rgba(8,10,9,.88);
+    box-shadow:0 24px 70px -28px #000;
+    -webkit-backdrop-filter:blur(16px);
+    backdrop-filter:blur(16px);
+    color:#dfe7de;
+  }
+  .panel-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:9px 11px;
+    border-bottom:1px solid #27302a;
+    flex:0 0 auto;
+  }
+  .panel-head strong{
+    font-weight:400;
+    letter-spacing:.2em;
+    white-space:nowrap;
+    color:#eef2ea;
+  }
+  .panel-head span{
+    flex:1;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    text-align:right;
+    color:#8fa196;
+    font-size:7.5px;
+    letter-spacing:.04em;
+  }
+  .panel-toggle{
+    appearance:none;
+    flex:0 0 auto;
+    width:18px;
+    height:18px;
+    padding:0;
+    border:1px solid #3a463c;
+    background:#17201a;
+    color:#cbd5c8;
+    font:12px/16px var(--mono);
+    cursor:pointer;
+  }
+  .panel-toggle:hover{background:#202b23}
+  .panel-body{
+    min-height:0;
+    overflow:auto;
+    padding:10px 11px 12px;
+    scrollbar-width:thin;
+    scrollbar-color:#3a463c transparent;
+  }
+  .panel-body[hidden]{display:none}
+  .p-section{padding:9px 0;border-top:1px solid #1f2822}
+  .p-section:first-child{border-top:0;padding-top:0}
+  .p-section:last-child{padding-bottom:0}
+  .p-title{
+    margin-bottom:6px;
+    color:#6f7c70;
+    font-size:7px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  .p-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    min-height:20px;
+    margin:4px 0;
+  }
+  .p-row > label:first-child{
+    flex:0 0 42px;
+    color:#8a988c;
+    font-size:7.5px;
+    letter-spacing:.12em;
+  }
+  .p-row.disabled{opacity:.42}
+  .p-row select,
+  .p-row input[type=text],
+  .p-row input[type=number]{
+    appearance:none;
+    min-width:0;
+    background:#111512;
+    color:#d6dbd4;
+    border:1px solid #354137;
+    font:8.5px/1.2 var(--mono);
+    padding:3px 5px;
+    letter-spacing:.04em;
+  }
+  .p-row select{flex:1}
+  .p-row input[type=text]{width:60px;flex:0 0 auto}
+  .p-row input[type=number]{width:44px;flex:0 0 auto}
+  #maxMR{width:86px;text-align:left;letter-spacing:.02em}
+  #resizeInterval{width:58px}
+  .p-row input[type=range]{
+    flex:1;
+    min-width:40px;
+    height:14px;
+    accent-color:#cbd2c9;
+    cursor:pointer;
+  }
+  .p-row output{
+    flex:0 0 34px;
+    text-align:right;
+    color:#e3e8e0;
+    font-size:8px;
+  }
+  .p-row button,
+  .p-btn{
+    appearance:none;
+    background:#17201a;
+    color:#cbd5c8;
+    border:1px solid #354137;
+    font:8.5px/1.2 var(--mono);
+    padding:3px 7px;
+    letter-spacing:.08em;
+    cursor:pointer;
+  }
+  .p-row button:hover{background:#202b23}
+  .p-hint{
+    flex:0 0 auto;
+    color:#5f6c62;
+    font-size:6.8px;
+    letter-spacing:.02em;
+  }
+  .p-progress{
+    flex:1;
+    min-width:40px;
+    height:7px;
+    border:1px solid #354137;
+    background:#111512;
+    overflow:hidden;
+  }
+  .p-progress > span{
+    display:block;
+    width:0;
+    height:100%;
+    background:#8fb5a0;
+    transition:width .12s linear;
+  }
+  .p-progress.error{
+    border-color:#6b3a32;
+  }
+  .p-progress.error > span{
+    background:#d84a33;
+  }
+  #loadPct{
+    flex:0 0 34px;
+    text-align:right;
+    color:#e3e8e0;
+    font-size:8px;
+  }
+  .p-cap{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    flex:0 0 auto;
+    color:#8a988c;
+    font-size:7px;
+    letter-spacing:.08em;
+  }
+  .p-readout{
+    color:#b9c5ba;
+    letter-spacing:.02em;
+  }
+  #readout{
+    white-space:pre-line;
+    word-break:break-word;
+    font-size:7.6px;
+    line-height:1.55;
+  }
+  #hitOut{
+    margin-top:5px;
+    color:#8fb5a0;
+    font-size:7.4px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  #resizeOut{
+    margin-top:4px;
+    color:#8a988c;
+    font-size:7.2px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  #status{
+    margin-top:4px;
+    color:#778077;
+    font-size:7.2px;
+    letter-spacing:.01em;
+  }
+  #status.on{color:#8fb5a0}
+  #status.bad{color:#e3b1a4}
+
+  #preflightOut{
+    margin-top:6px;
+    padding:6px;
+    border:1px solid rgba(227,177,164,.42);
+    background:rgba(227,177,164,.07);
+    color:#e3b1a4;
+    font-size:7.2px;
+    line-height:1.5;
+    white-space:pre-line;
+    overflow-wrap:anywhere;
+  }
+  #preflightOut[hidden]{display:none}
+  #preflightOut.warn{
+    border-color:rgba(214,188,120,.45);
+    background:rgba(214,188,120,.07);
+    color:#d6bc78;
+  }
+  #preflightOut.bad{
+    border-color:rgba(227,177,164,.55);
+    background:rgba(227,177,164,.09);
+    color:#e3b1a4;
+  }
+
+  /* Lab-only full-screen frame, driven exclusively by resizeStart/resizeEnd. */
+  .resize-frame{
+    position:fixed;
+    inset:10px;
+    z-index:100;
+    pointer-events:none;
+    border:1px solid rgba(216,74,51,.9);
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .08s linear;
+  }
+  .resize-frame.on{
+    opacity:1;
+    visibility:visible;
+  }
+  .resize-frame::before{
+    content:"";
+    position:absolute;
+    inset:5px;
+    border:1px solid rgba(216,74,51,.22);
+  }
+  .resize-frame-label{
+    position:absolute;
+    top:-1px;
+    left:-1px;
+    padding:3px 7px;
+    background:var(--red);
+    color:#080a09;
+    font:8px/1.2 var(--mono);
+    letter-spacing:.16em;
+    white-space:nowrap;
+  }
+</style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="art" id="art">
+      <div class="grid"></div>
+      <div class="frame"></div>
+      <div class="redline"></div>
+      <div class="title">MIRROR<br>FIELD</div>
+      <div class="cn">镜 面 场</div>
+      <div class="panel">
+        <div class="panel-k">HIT TEST / CENTER</div>
+        <button class="hit-btn" id="hitBtn" type="button">TARGET <span id="hitN">0</span></button>
+        <input class="hit-input" id="hitInput" type="text" placeholder="TYPE HERE" autocomplete="off">
+        <button class="hit-toggle" id="hitToggle" type="button">TOGGLE <span id="toggleN">0</span></button>
+        <div class="hit-local" id="hitLocal">local —</div>
+      </div>
+      <div class="barcode"></div>
+      <div class="meta"><span>CONTENT / DESIGN 600 × 360</span><span>MOVED INTO mirror.js FRAME</span></div>
+    </div>
+  </div>
+
+  <aside class="panel-ui" id="panel" aria-label="mirror tuning panel">
+    <div class="panel-head">
+      <strong>MIRROR.JS / LAB</strong>
+      <span id="support">initializing…</span>
+      <button class="panel-toggle" id="panelToggle" type="button" aria-expanded="true" aria-controls="panelBody">–</button>
+    </div>
+    <div class="panel-body" id="panelBody">
+      <section class="p-section">
+        <div class="p-title">BACKEND</div>
+        <div class="p-row">
+          <label for="mode">MODE</label>
+          <select id="mode">
+            <option value="svg" selected>svg</option>
+            <option value="webgl">webgl</option>
+          </select>
+          <span class="p-hint">svg / three</span>
+        </div>
+        <div class="p-row">
+          <label for="resizeInterval">RESIZE</label>
+          <input id="resizeInterval" type="number" min="0" max="2000" step="10" value="100" title="Resize debounce interval; relayout happens once after this quiet period">
+          <span class="p-hint">ms debounce</span>
+        </div>
+        <div class="p-row" id="loadRow">
+          <label>THREE</label>
+          <div class="p-progress" id="loadTrack" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" title="single-file three bundle">
+            <span id="loadBar"></span>
+          </div>
+          <output id="loadPct">—</output>
+        </div>
+        <div class="p-row" id="renderRow">
+          <label for="renderScale">MIRROR</label>
+          <select id="renderScale" title="Mirror-band render resolution before linear upscaling">
+            <option value="1" selected>1×</option>
+            <option value="0.75">0.75×</option>
+            <option value="0.67">0.67×</option>
+            <option value="0.5">0.5×</option>
+            <option value="0.375">0.375×</option>
+            <option value="0.33">0.33×</option>
+            <option value="0.25">0.25×</option>
+            <option value="0.125">0.125×</option>
+          </select>
+          <span class="p-hint">bands</span>
+        </div>
+        <div class="p-row" id="contentRow">
+          <label for="contentScale">BODY</label>
+          <select id="contentScale" title="Centre body render resolution before linear upscaling">
+            <option value="1" selected>1×</option>
+            <option value="0.75">0.75×</option>
+            <option value="0.5">0.5×</option>
+            <option value="0.375">0.375×</option>
+            <option value="0.25">0.25×</option>
+            <option value="0.125">0.125×</option>
+          </select>
+          <span class="p-hint">center</span>
+        </div>
+        <div class="p-row" id="mapRow">
+          <label for="mapScale">MAP</label>
+          <select id="mapScale" title="SVG displacement map resolution multiplier">
+            <option value="device" selected>device</option>
+            <option value="0.1">0.1×</option>
+            <option value="0.25">0.25×</option>
+            <option value="0.5">0.5×</option>
+            <option value="0.75">0.75×</option>
+            <option value="1">1×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+            <option value="3">3×</option>
+            <option value="4">4×</option>
+          </select>
+        </div>
+        <div class="p-row" id="maxMrRow">
+          <label for="maxMR">MAX MR</label>
+          <input id="maxMR" type="text" value="1920x1080" placeholder="1920x1080" title="Maximum generated map resolution (width x height)">
+          <span class="p-hint">W × H</span>
+        </div>
+      </section>
+
+      <section class="p-section">
+        <div class="p-title">CONTENT</div>
+        <div class="p-row">
+          <label for="sizeW">W</label>
+          <input id="sizeW" type="text" value="600px" aria-label="content width">
+          <label for="sizeH">H</label>
+          <input id="sizeH" type="text" value="360px" aria-label="content height">
+          <button id="applySize" type="button">APPLY</button>
+        </div>
+        <div class="p-row">
+          <label for="preset">PRESET</label>
+          <select id="preset">
+            <option value="600px|360px" selected>600 × 360 px</option>
+            <option value="50%|40%">50% × 40%</option>
+            <option value="66.667%|60%">66.667% × 60%</option>
+            <option value="420px|70%">420px × 70%</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="p-section">
+        <div class="p-title">FILTER / BANDS</div>
+        <div class="p-row">
+          <label for="blur">BLUR</label>
+          <input id="blur" type="range" min="0" max="8" step=".25" value="2">
+          <output id="blurOut">2.00</output>
+        </div>
+        <div class="p-row">
+          <label for="feather">FEATHER</label>
+          <input id="feather" type="range" min="0" max="160" step="2" value="40">
+          <output id="featherOut">40</output>
+        </div>
+      </section>
+
+      <section class="p-section p-readout">
+        <div class="p-title">READOUT</div>
+        <div id="readout">loading…</div>
+        <div id="resizeOut">resize: idle · 100 ms</div>
+        <div id="hitOut">hit: —</div>
+        <div id="status">creating instance…</div>
+        <div id="preflightOut" hidden></div>
+      </section>
+    </div>
+  </aside>
+
+  <div class="resize-frame" id="resizeFrame" aria-hidden="true">
+    <span class="resize-frame-label" id="resizeFrameLabel">RESIZE</span>
+  </div>
+
+<script type="module">
+import { createMirror, checkHtmlInCanvasSupport } from './js/mirror.js';
+import { loadThreeBundle } from './js/three-bundle-loader.js';
+
+(() => {
+  'use strict';
+
+  const stage = document.getElementById('stage');
+  const art = document.getElementById('art');
+  const support = document.getElementById('support');
+  const readout = document.getElementById('readout');
+  const hitOut = document.getElementById('hitOut');
+  const resizeOut = document.getElementById('resizeOut');
+  const resizeFrame = document.getElementById('resizeFrame');
+  const resizeFrameLabel = document.getElementById('resizeFrameLabel');
+  const status = document.getElementById('status');
+  const preflightOut = document.getElementById('preflightOut');
+  const panelBody = document.getElementById('panelBody');
+  const panelToggle = document.getElementById('panelToggle');
+
+  const modeSelect = document.getElementById('mode');
+  const resizeInterval = document.getElementById('resizeInterval');
+  const loadTrack = document.getElementById('loadTrack');
+  const loadBar = document.getElementById('loadBar');
+  const loadPct = document.getElementById('loadPct');
+  const renderScale = document.getElementById('renderScale');
+  const renderRow = document.getElementById('renderRow');
+  const contentScale = document.getElementById('contentScale');
+  const contentRow = document.getElementById('contentRow');
+  const mapScale = document.getElementById('mapScale');
+  const maxMR = document.getElementById('maxMR');
+  const mapRow = document.getElementById('mapRow');
+  const maxMrRow = document.getElementById('maxMrRow');
+  const sizeW = document.getElementById('sizeW');
+  const sizeH = document.getElementById('sizeH');
+  const applySize = document.getElementById('applySize');
+  const preset = document.getElementById('preset');
+
+  const blurInput = document.getElementById('blur');
+  const featherInput = document.getElementById('feather');
+  const blurOut = document.getElementById('blurOut');
+  const featherOut = document.getElementById('featherOut');
+
+  const hitBtn = document.getElementById('hitBtn');
+  const hitN = document.getElementById('hitN');
+  const hitInput = document.getElementById('hitInput');
+  const hitToggle = document.getElementById('hitToggle');
+  const toggleN = document.getElementById('toggleN');
+  const hitLocal = document.getElementById('hitLocal');
+
+  let mirror = null;
+  let buildToken = 0;
+  let maxMRTimer = 0;
+  let hits = 0;
+  let toggles = 0;
+
+  function currentFilter() {
+    return {
+      blur: parseFloat(blurInput.value) || 0,
+      feather: parseFloat(featherInput.value) || 0
+    };
+  }
+
+  function currentSvgOptions() {
+    return {
+      mapScale: mapScale.value === 'device' ? 'device' : parseFloat(mapScale.value),
+      maxMR: maxMR.value.trim() || null
+    };
+  }
+
+  function currentWebglOptions() {
+    return {
+      dprCap: 2,
+      renderScale: parseFloat(renderScale.value) || 1,
+      contentScale: parseFloat(contentScale.value) || 1,
+      fallbackToSvg: true
+    };
+  }
+
+  function currentResizeInterval() {
+    if (resizeInterval.value.trim() === '') return 100;
+    const value = Number(resizeInterval.value);
+    return Number.isFinite(value) && value >= 0 ? value : 100;
+  }
+
+  function updateResizeOut(phase, detail = null) {
+    const interval = detail?.interval ?? currentResizeInterval();
+    const elapsed = detail && phase !== 'start' && phase !== 'idle'
+      ? ` · ${Math.round(detail.elapsed)} ms`
+      : '';
+    resizeOut.textContent = `resize: ${phase} · ${interval} ms${elapsed}`;
+  }
+
+  function setResizeFrame(visible, detail = null) {
+    resizeFrame.classList.toggle('on', visible);
+    if (!visible) return;
+    if (detail) {
+      resizeFrameLabel.textContent =
+        `RESIZE / ${Math.round(detail.width)} × ${Math.round(detail.height)}`;
+    } else {
+      resizeFrameLabel.textContent = 'RESIZE';
+    }
+  }
+
+  function updateFilterLabels() {
+    blurOut.textContent = (parseFloat(blurInput.value) || 0).toFixed(2);
+    featherOut.textContent = String(parseFloat(featherInput.value) || 0);
+  }
+
+  function syncScaleSelect(select, value) {
+    const text = String(value);
+    if (Array.from(select.options).some((option) => option.value === text)) {
+      select.value = text;
+    }
+  }
+
+  function syncMapControls() {
+    const isSvg = !!mirror && mirror.mode === 'svg';
+    const isWebgl = !!mirror && mirror.mode === 'webgl';
+    mapScale.disabled = !isSvg;
+    maxMR.disabled = !isSvg;
+    mapRow.classList.toggle('disabled', !isSvg);
+    maxMrRow.classList.toggle('disabled', !isSvg);
+    renderScale.disabled = !isWebgl;
+    contentScale.disabled = !isWebgl;
+    renderRow.classList.toggle('disabled', !isWebgl);
+    contentRow.classList.toggle('disabled', !isWebgl);
+  }
+
+  function updateReadout() {
+    updateFilterLabels();
+    if (!mirror) {
+      readout.textContent = 'no mirror instance';
+      syncMapControls();
+      return;
+    }
+    const state = mirror.getState();
+    if (state.renderDetail) {
+      syncScaleSelect(renderScale, state.renderDetail.renderScale);
+      syncScaleSelect(contentScale, state.renderDetail.contentScale);
+    }
+    const layout = state.layout;
+    const lines = [];
+    if (layout) {
+      lines.push(
+        `mode ${state.mode}${state.fallbackReason ? ` (requested ${state.requestedMode})` : ''} · dpr ${state.dpr.toFixed(2)}`,
+        `stage ${layout.width}×${layout.height} · art ${layout.ax.toFixed(1)},${layout.ay.toFixed(1)} ${layout.aw.toFixed(1)}×${layout.ah.toFixed(1)}`
+      );
+    } else {
+      lines.push(`mode ${state.mode} · dpr ${state.dpr.toFixed(2)}`);
+    }
+
+    if (state.mapDetail) {
+      const detail = state.mapDetail;
+      const requested = detail.requestedScale === 'device' ? 'device' : `${detail.requestedScale}×`;
+      const cap = detail.maxMR
+        ? `maxMR ${detail.maxMR.width}×${detail.maxMR.height}`
+        : 'no cap';
+      lines.push(
+        `map ${detail.width}×${detail.height} · ${detail.effectiveScale.toFixed(2)}× (request ${requested})`,
+        `${(detail.pixels / 1e6).toFixed(2)} MP · ${cap}`
+      );
+      if (state.map?.mask) lines.push(`mask ${state.map.mask}`);
+    } else if (state.renderDetail) {
+      const detail = state.renderDetail;
+      lines.push(
+        `mirror ${detail.width}×${detail.height} · ${detail.renderScale.toFixed(2)}×`,
+        `body ${detail.contentWidth}×${detail.contentHeight} · ${detail.contentScale.toFixed(2)}×`,
+        `canvas ${detail.outputWidth}×${detail.outputHeight} · ` +
+          `${detail.active ? 'composite + linear' : 'direct'}`
+      );
+    } else if (state.map) {
+      const parts = Object.keys(state.map).map((key) => `${key} ${state.map[key]}`);
+      lines.push(`maps ${parts.join(' · ')}`);
+    }
+
+    lines.push(
+      `filter bands · blur ${state.filter.blur.toFixed(2)} px`,
+      `feather ${state.filter.feather.toFixed(0)} px`
+    );
+    readout.textContent = lines.join('\n');
+
+    const render = state.renderDetail
+      ? ` · m${state.renderDetail.renderScale.toFixed(2)} b${state.renderDetail.contentScale.toFixed(2)}`
+      : '';
+    const preflight = window.__mirrorLab?.lastPreflight;
+    const hic = preflight
+      ? (preflight.ok ? (preflight.compatible ? 'ok' : 'degraded') : 'missing')
+      : '—';
+    support.textContent =
+      `dpr ${state.dpr.toFixed(2)} · ${state.mode}${render}${state.suspended ? ' · suspended' : ''}` +
+      `${state.fallbackReason ? ' · fallback' : ''} · hic ${hic}`;
+    support.title = preflight
+      ? [...preflight.errors, ...preflight.warnings].map((issue) => `${issue.code}: ${issue.message}`).join('\n')
+      : '';
+    syncMapControls();
+  }
+
+  function setStatus(text, bad = false) {
+    status.textContent = text;
+    status.classList.toggle('bad', bad);
+    status.classList.toggle('on', !bad);
+  }
+
+  function renderPreflight(result) {
+    const issues = result ? [...result.errors, ...result.warnings] : [];
+    if (!issues.length) {
+      preflightOut.hidden = true;
+      preflightOut.textContent = '';
+      preflightOut.title = '';
+      return;
+    }
+    const issue = issues[0];
+    const failed = result.errors.length > 0;
+    preflightOut.hidden = false;
+    preflightOut.className = failed ? 'bad' : 'warn';
+    preflightOut.textContent =
+      `${failed ? 'PREFLIGHT FAILED' : 'PREFLIGHT WARNING'} · ${issue.code}\n${issue.message}`;
+    preflightOut.title = issues.map((item) => `${item.code}: ${item.message}`).join('\n');
+  }
+
+  function formatBytes(value) {
+    if (!Number.isFinite(value) || value < 0) return '—';
+    if (value < 1024) return `${value} B`;
+    if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+    return `${(value / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  function resetLoadBar() {
+    loadBar.style.width = '0%';
+    loadTrack.setAttribute('aria-valuenow', '0');
+    loadTrack.classList.remove('error');
+    loadTrack.title = 'single-file three bundle';
+    loadPct.textContent = '—';
+  }
+
+  function updateLoadBar(event) {
+    if (modeSelect.value !== 'webgl') return;
+    const ratio = Number.isFinite(event.ratio)
+      ? Math.max(0, Math.min(1, event.ratio))
+      : null;
+    const percent = event.phase === 'done'
+      ? 100
+      : ratio == null ? 0 : Math.round(ratio * 100);
+
+    loadBar.style.width = `${percent}%`;
+    loadTrack.setAttribute('aria-valuenow', String(percent));
+    loadTrack.classList.toggle('error', event.phase === 'error');
+
+    if (event.phase === 'error') {
+      loadPct.textContent = 'ERR';
+      loadTrack.title = event.error ? event.error.message : 'load failed';
+      return;
+    }
+    if (event.cached) {
+      loadPct.textContent = '100%';
+      loadTrack.title = 'cached single-file three bundle';
+      return;
+    }
+    if (event.total) {
+      loadPct.textContent = `${percent}%`;
+      loadTrack.title = `${formatBytes(event.loaded)} / ${formatBytes(event.total)}`;
+    } else if (event.phase === 'done') {
+      loadPct.textContent = '100%';
+      loadTrack.title = `${formatBytes(event.loaded)} · size unknown`;
+    } else {
+      loadPct.textContent = ratio == null ? '…' : `${percent}%`;
+      loadTrack.title = `${formatBytes(event.loaded)} · size unknown`;
+    }
+  }
+
+  async function rebuild() {
+    const token = ++buildToken;
+    const mode = modeSelect.value;
+    const preflight = checkHtmlInCanvasSupport();
+    if (window.__mirrorLab) window.__mirrorLab.lastPreflight = preflight;
+    renderPreflight(mode === 'webgl' ? preflight : null);
+    if (mode === 'webgl' && !preflight.ok) {
+      setStatus(`webgl preflight: ${preflight.errors[0].message}`, true);
+    }
+    updateResizeOut('idle');
+    setResizeFrame(false);
+    if (mode === 'svg') {
+      if (mirror) {
+        mirror.destroy();
+        mirror = null;
+      }
+      resetLoadBar();
+    } else {
+      loadBar.style.width = '0%';
+      loadPct.textContent = '…';
+      loadTrack.classList.remove('error');
+    }
+    syncMapControls();
+
+    let THREE = null;
+    let bundleError = null;
+    if (mode === 'webgl') {
+      setStatus('loading three.bundle.js…');
+      try {
+        THREE = await loadThreeBundle({ onProgress: updateLoadBar });
+        if (token !== buildToken) return;
+        setStatus('three bundle ready');
+      } catch (error) {
+        if (token !== buildToken) return;
+        bundleError = error;
+        console.error(error);
+        updateLoadBar({ phase: 'error', error });
+        setStatus('bundle failed → vendor loader', true);
+      }
+    }
+
+    // Keep the old mirror visible while the WebGL bundle downloads.
+    if (mirror) {
+      mirror.destroy();
+      mirror = null;
+    }
+
+    setStatus(`creating ${mode}…`);
+    try {
+      const webglOptions = currentWebglOptions();
+      if (THREE) webglOptions.three = THREE;
+
+      const instance = await createMirror({
+        container: stage,
+        content: art,
+        mode,
+        contentSize: {
+          width: sizeW.value.trim(),
+          height: sizeH.value.trim()
+        },
+        contentFit: 'fill',
+        background: '#121713',
+        filter: currentFilter(),
+        svg: currentSvgOptions(),
+        webgl: webglOptions,
+        resize: { interval: currentResizeInterval() }
+      });
+      if (token !== buildToken) {
+        instance.destroy();
+        return;
+      }
+      mirror = instance;
+      window.__mouseFx?.remount?.();
+      mirror.on('resize', updateReadout);
+      mirror.on('resizeStart', (event) => {
+        updateResizeOut('start', event.detail);
+        setResizeFrame(true, event.detail);
+      });
+      mirror.on('resizing', (event) => {
+        updateResizeOut('resizing', event.detail);
+        setResizeFrame(true, event.detail);
+      });
+      mirror.on('resizeEnd', (event) => {
+        updateResizeOut('end', event.detail);
+        setResizeFrame(false);
+      });
+      mirror.on('filter', updateReadout);
+      mirror.on('render', updateReadout);
+      mirror.on('error', (event) => {
+        console.error(event.detail.error);
+        setStatus(`layout error: ${event.detail.error.message}`, true);
+        updateReadout();
+      });
+      setStatus(
+        mirror.mode === mirror.requestedMode
+          ? `${mirror.mode} backend ready${bundleError ? ' · vendor fallback' : ''}`
+          : `${mirror.requestedMode} unavailable → ${mirror.mode}`,
+        mirror.mode !== mirror.requestedMode || !!bundleError
+      );
+      updateReadout();
+    } catch (error) {
+      if (token !== buildToken) return;
+      console.error(error);
+      setStatus(`create failed: ${error.message}`, true);
+      updateReadout();
+    }
+  }
+
+  applySize.addEventListener('click', () => {
+    if (!mirror) return;
+    try {
+      mirror.setContentSize({ width: sizeW.value.trim(), height: sizeH.value.trim() });
+      setStatus('content size updated');
+      updateReadout();
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  });
+
+  preset.addEventListener('change', () => {
+    const [width, height] = preset.value.split('|');
+    sizeW.value = width;
+    sizeH.value = height;
+    applySize.click();
+  });
+
+  modeSelect.addEventListener('change', rebuild);
+
+  resizeInterval.addEventListener('change', () => {
+    if (!mirror) return;
+    rebuild();
+  });
+
+  renderScale.addEventListener('change', () => {
+    if (!mirror || mirror.mode !== 'webgl') return;
+    try {
+      mirror.setWebglOptions({
+        renderScale: parseFloat(renderScale.value) || 1,
+        contentScale: parseFloat(contentScale.value) || 1
+      });
+      setStatus('mirror scale updated');
+      updateReadout();
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  });
+
+  contentScale.addEventListener('change', () => {
+    if (!mirror || mirror.mode !== 'webgl') return;
+    try {
+      mirror.setWebglOptions({
+        renderScale: parseFloat(renderScale.value) || 1,
+        contentScale: parseFloat(contentScale.value) || 1
+      });
+      setStatus('body scale updated');
+      updateReadout();
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  });
+
+  mapScale.addEventListener('change', () => {
+    if (!mirror || mirror.mode !== 'svg') return;
+    try {
+      mirror.setSvgOptions({
+        mapScale: mapScale.value === 'device' ? 'device' : parseFloat(mapScale.value)
+      });
+      setStatus('map scale updated');
+      updateReadout();
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  });
+
+  function applyMaxMR() {
+    if (!mirror || mirror.mode !== 'svg') return;
+    try {
+      mirror.setSvgOptions({ maxMR: maxMR.value.trim() || null });
+      setStatus('max map resolution updated');
+      updateReadout();
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  }
+
+  maxMR.addEventListener('input', () => {
+    clearTimeout(maxMRTimer);
+    const value = maxMR.value.trim();
+    // Don't flash errors for incomplete typing; commit complete WxH or blank.
+    if (value !== '' && !/^\d+\s*[x×]\s*\d+$/i.test(value)) return;
+    maxMRTimer = setTimeout(applyMaxMR, 350);
+  });
+
+  maxMR.addEventListener('change', () => {
+    clearTimeout(maxMRTimer);
+    maxMRTimer = 0;
+    applyMaxMR();
+  });
+
+  for (const input of [blurInput, featherInput]) {
+    input.addEventListener('input', () => {
+      updateFilterLabels();
+      mirror?.setFilter(currentFilter());
+    });
+  }
+
+  hitBtn.addEventListener('click', () => {
+    hits += 1;
+    hitN.textContent = String(hits);
+    hitLocal.textContent = `click ${hits} · DOM target OK`;
+    hitOut.textContent = `hit: TARGET ${hits} · mode ${mirror?.mode ?? '—'}`;
+  });
+
+  hitInput.addEventListener('input', () => {
+    hitLocal.textContent = `input: ${hitInput.value}`;
+    hitOut.textContent = `input: "${hitInput.value}" · mode ${mirror?.mode ?? '—'}`;
+  });
+
+  hitToggle.addEventListener('click', () => {
+    toggles += 1;
+    toggleN.textContent = String(toggles);
+    hitToggle.classList.toggle('on', toggles % 2 === 1);
+    hitLocal.textContent = `toggle: ${toggles}`;
+    hitOut.textContent = `hit: TOGGLE ${toggles} · mode ${mirror?.mode ?? '—'}`;
+  });
+
+  panelToggle.addEventListener('click', () => {
+    const expand = panelBody.hidden;
+    panelBody.hidden = !expand;
+    panelToggle.textContent = expand ? '–' : '+';
+    panelToggle.setAttribute('aria-expanded', String(expand));
+  });
+
+  window.__mirrorLab = {
+    stage,
+    art,
+    lastPreflight: null,
+    get mirror() { return mirror; },
+    getState: () => mirror?.getState() ?? null,
+    preflight(options) { return checkHtmlInCanvasSupport(options); },
+    rebuild,
+    updateReadout,
+    setMode(mode) {
+      modeSelect.value = mode;
+      return rebuild();
+    },
+    setMapScale(value) {
+      mapScale.value = String(value);
+      mapScale.dispatchEvent(new Event('change'));
+    },
+    setMaxMR(value) {
+      maxMR.value = value == null ? '' : String(value);
+      maxMR.dispatchEvent(new Event('change'));
+    },
+    setRenderScale(value) {
+      renderScale.value = String(value);
+      renderScale.dispatchEvent(new Event('change'));
+    },
+    setContentScale(value) {
+      contentScale.value = String(value);
+      contentScale.dispatchEvent(new Event('change'));
+    },
+    setResizeInterval(value) {
+      resizeInterval.value = String(value);
+      return rebuild();
+    },
+    getRenderDetail: () => mirror?.getState().renderDetail ?? null
+  };
+
+  updateFilterLabels();
+  rebuild();
+})();
+</script>
+<script>
+(() => {
+  'use strict';
+
+  const art = document.getElementById('art');
+  if (!art) return;
+
+  let active = null;
+  let started = false;
+  const lastPointer = { x: 0.5, y: 0.5, active: false };
+  const api = {
+    remount() {
+      if (!window.__mirrorLab || !window.__mirrorLab.mirror) return;
+      start();
+    }
+  };
+  window.__mouseFx = api;
+
+  function start() {
+    started = true;
+    if (active) {
+      active.controller.abort();
+      active.observer?.disconnect();
+      active.cancel?.();
+      active.canvas.remove();
+      active = null;
+    }
+    const controller = new AbortController();
+    const canvas = document.createElement('canvas');
+    canvas.id = 'mouseFx';
+    canvas.className = 'mouse-fx';
+    canvas.setAttribute('aria-hidden', 'true');
+    art.prepend(canvas);
+
+    const gl = canvas.getContext('webgl2', {
+      alpha: true,
+      premultipliedAlpha: true,
+      antialias: false,
+      preserveDrawingBuffer: true
+    });
+    if (!gl) {
+      canvas.hidden = true;
+      return;
+    }
+
+  const VERTEX = `#version 300 es
+    in vec2 aPos;
+    out vec2 vUv;
+    void main() {
+      vUv = aPos * 0.5 + 0.5;
+      gl_Position = vec4(aPos, 0.0, 1.0);
+    }`;
+
+  const FRAGMENT = `#version 300 es
+    precision highp float;
+
+    uniform vec2 uMouse;      // normalized, top-left
+    uniform float uAspect;
+    uniform float uSigma;     // relative to source height
+    uniform float uIntensity;
+
+    in vec2 vUv;
+    out vec4 outColor;
+
+    void main() {
+      vec2 p = vec2(vUv.x, 1.0 - vUv.y);
+      vec2 d = p - uMouse;
+      d.x *= uAspect;
+      float g = exp(-0.5 * dot(d, d) / (uSigma * uSigma));
+      float alpha = g * uIntensity;
+      // Neutral gray, premultiplied alpha. The Gaussian is the opacity field.
+      outColor = vec4(vec3(0.05) * alpha, alpha);
+    }`;
+
+  const compile = (type, source) => {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      throw new Error(gl.getShaderInfoLog(shader) || 'shader compile failed');
+    }
+    return shader;
+  };
+
+  let program;
+  try {
+    program = gl.createProgram();
+    gl.attachShader(program, compile(gl.VERTEX_SHADER, VERTEX));
+    gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAGMENT));
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error(gl.getProgramInfoLog(program) || 'program link failed');
+    }
+  } catch (error) {
+    console.error('mouseFx shader:', error);
+    canvas.hidden = true;
+    return;
+  }
+
+  gl.useProgram(program);
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+    gl.STATIC_DRAW
+  );
+  const aPos = gl.getAttribLocation(program, 'aPos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  const uMouse = gl.getUniformLocation(program, 'uMouse');
+  const uAspect = gl.getUniformLocation(program, 'uAspect');
+  const uSigma = gl.getUniformLocation(program, 'uSigma');
+  const uIntensity = gl.getUniformLocation(program, 'uIntensity');
+
+  gl.uniform1f(uSigma, 0.2);
+  gl.uniform1f(uIntensity, 0.58);
+  gl.disable(gl.BLEND);
+  gl.clearColor(0, 0, 0, 0);
+
+  let pointerX = lastPointer.x;
+  let pointerY = lastPointer.y;
+  let pointerActive = lastPointer.active;
+  let raf = 0;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return null;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // No DPR^2 workaround here: the nested-canvas capture bug is fixed in
+    // Chrome 157. On older Chrome the preflight warning explains the visual
+    // mismatch instead of silently oversampling the effect canvas.
+    const width = Math.max(1, Math.round(rect.width * dpr));
+    const height = Math.max(1, Math.round(rect.height * dpr));
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+      gl.viewport(0, 0, width, height);
+    }
+    gl.uniform1f(uAspect, rect.width / rect.height);
+    return rect;
+  }
+
+  function render() {
+    const rect = resize();
+    if (!rect) return;
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    if (!pointerActive) return;
+    gl.uniform2f(uMouse, pointerX, pointerY);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  function schedule() {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      render();
+    });
+  }
+
+  art.addEventListener('pointermove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
+    pointerX = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    pointerY = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+    lastPointer.x = pointerX;
+    lastPointer.y = pointerY;
+    lastPointer.active = true;
+    pointerActive = true;
+    schedule();
+  }, { passive: true, signal: controller.signal });
+
+  art.addEventListener('pointerleave', () => {
+    lastPointer.active = false;
+    pointerActive = false;
+    schedule();
+  }, { passive: true, signal: controller.signal });
+
+  const observer = typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver(schedule)
+    : null;
+  observer?.observe(art);
+  window.addEventListener('resize', schedule, { passive: true, signal: controller.signal });
+
+  active = {
+    canvas,
+    controller,
+    observer,
+    cancel() {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    }
+  };
+
+  Object.assign(api, {
+    canvas,
+    render,
+    clear() {
+      lastPointer.active = false;
+      pointerActive = false;
+      schedule();
+    },
+    setMouse(x, y) {
+      pointerX = Math.max(0, Math.min(1, x));
+      pointerY = Math.max(0, Math.min(1, y));
+      lastPointer.x = pointerX;
+      lastPointer.y = pointerY;
+      lastPointer.active = true;
+      pointerActive = true;
+      schedule();
+    }
+  });
+
+  render();
+  }
+
+  function init() {
+    if (started) return;
+    if (!window.__mirrorLab || !window.__mirrorLab.mirror) return;
+    start();
+  }
+  if (window.__mirrorLab && window.__mirrorLab.mirror) {
+    init();
+  } else {
+    const timer = setInterval(init, 50);
+    setTimeout(() => {
+      clearInterval(timer);
+      if (!started) start();
+    }, 3000);
+  }
+})();
+</script>
+</body>
+</html>

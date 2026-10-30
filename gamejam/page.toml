@@ -1,0 +1,21 @@
+# Page manifest consumed by ../build.py.
+# Runtime files are copied to dist/gamejam/. Source-only helpers stay behind.
+
+name = "gamejam"
+title = "GAMEJAM 2026 — 镜湖 / MIRROR LAKE"
+entry = "index.html"
+
+# Copy the real page, the lab page, and the runtime JavaScript tree.
+# Remove "mirror-lab.html" here if a production-only build is preferred.
+include = [
+  "index.html",
+  "mirror-lab.html",
+  "js/**",
+]
+
+# three-bundle-entry.js is the esbuild input, not a browser asset.
+exclude = [
+  "js/three-bundle-entry.js",
+  "js/**/*.map",
+  "js/**/__pycache__/**",
+]
