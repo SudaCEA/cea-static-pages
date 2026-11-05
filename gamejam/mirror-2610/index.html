@@ -14,9 +14,10 @@
     --mono:"SFMono-Regular","Cascadia Mono","Roboto Mono",Consolas,monospace;
     --sans:"Helvetica Neue","Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Songti SC","Noto Serif CJK SC","Source Han Serif SC","Times New Roman",serif;
-    /* Cover-only spacing controls. The tuning panel writes these at runtime. */
+    /* Cover-only spacing. Line and Image Y are adjustable; the
+       content-to-rule gap and text translate are fixed. */
     --cover-bar-height:3px;
-    --cover-bottom-gap:22px;
+    --cover-bottom-gap:32px;
     --cover-text-y:0px;
     --cover-art-y:0px;
   }
@@ -215,7 +216,7 @@
     --quad-rule:#9b9b9b;
     --quad-pointer-size:clamp(42px,5.8cqw,72px);
     --quadrant-shift-x:clamp(22px,6cqw,76px);
-    --quadrant-shift-y:clamp(16px,6cqh,48px);
+    --quadrant-shift-y:clamp(16px,5.2cqh,42px);
   }
   .quadrant-rule{
     position:absolute;
@@ -258,9 +259,10 @@
     position:relative;
     display:grid;
     place-items:center;
-    width:min(72%, 280px);
-    height:clamp(104px,16cqh,128px);
-    padding:clamp(12px,2.2cqw,26px) clamp(10px,2.4cqw,28px);
+    width:min(calc(50cqw - var(--quadrant-shift-x) - var(--quadrant-shift-x) - 2px), 450px);
+    height:auto;
+    min-height:clamp(104px,16cqh,128px);
+    padding:clamp(12px,2.2cqw,26px) clamp(1px,.15cqw,4px);
     background:transparent;
   }
   /* Push each copy group away from the origin toward its outer corner. Only
@@ -282,7 +284,6 @@
     display:grid;
     place-items:center;
     width:100%;
-    max-width:22ch;
     text-align:center;
   }
   .quadrant-title,
@@ -300,7 +301,7 @@
     transition:opacity .22s ease;
   }
   .quadrant-detail{
-    max-width:19ch;
+    max-width:100%;
     font:400 clamp(21px,2.4cqw,28.5px)/1.5 var(--serif);
     letter-spacing:.025em;
     opacity:0;
@@ -566,7 +567,8 @@
     .quadrant{padding:6px}
     .quadrant-frame{
       width:min(92%, 150px);
-      height:58px;
+      height:auto;
+      min-height:58px;
       padding:8px 6px;
     }
     .quadrant-title{
@@ -574,7 +576,7 @@
       letter-spacing:.02em;
     }
     .quadrant-detail{
-      max-width:15ch;
+      max-width:100%;
       font-size:clamp(13.5px,4.65cqw,18px);
       line-height:1.42;
     }
@@ -704,7 +706,8 @@
     gap:8px;
     min-height:24px;
   }
-  .tuner-row label{color:rgba(232,223,202,.72)}
+  .tuner-row label,
+  .tuner-row .tuner-fixed{color:rgba(232,223,202,.72)}
   .tuner-value{
     color:var(--paper);
     font-variant-numeric:tabular-nums;
@@ -1013,7 +1016,7 @@
                 <div class="quadrant-frame" data-fade data-fade-in-delay="0" data-fade-out-delay="70">
                   <div class="quadrant-copy">
                     <h2 class="quadrant-title" data-parallax="0.22">时间</h2>
-                    <p class="quadrant-detail" data-parallax="0.5">从第一笔开始，<br>在有限时间里完成。</p>
+                    <p class="quadrant-detail" data-parallax="0.5">10月23日到10月25日<br>传统 48 小时 GameJam 模式</p>
                   </div>
                 </div>
               </article>
@@ -1022,7 +1025,7 @@
                 <div class="quadrant-frame" data-fade data-fade-in-delay="45" data-fade-out-delay="55">
                   <div class="quadrant-copy">
                     <h2 class="quadrant-title" data-parallax="0.22">主题</h2>
-                    <p class="quadrant-detail" data-parallax="0.5">镜不是答案，<br>是一种观看方式。</p>
+                    <p class="quadrant-detail" data-parallax="0.5">镜<br>光路的魔术<br>从镜中看到怎样的玩法？<br>从镜中诞生怎样的世界？</p>
                   </div>
                 </div>
               </article>
@@ -1031,7 +1034,7 @@
                 <div class="quadrant-frame" data-fade data-fade-in-delay="90" data-fade-out-delay="40">
                   <div class="quadrant-copy">
                     <h2 class="quadrant-title" data-parallax="0.22">限制</h2>
-                    <p class="quadrant-detail" data-parallax="0.5">不用外部图像，<br>让页面自己发声。</p>
+                    <p class="quadrant-detail" data-parallax="0.5">美术呈现只能使用不多于三个色相<br>鼓励用简洁的颜色凸显玩法与创意<br>保留可供风格化的发挥空间</p>
                   </div>
                 </div>
               </article>
@@ -1040,7 +1043,7 @@
                 <div class="quadrant-frame" data-fade data-fade-in-delay="135" data-fade-out-delay="25">
                   <div class="quadrant-copy">
                     <h2 class="quadrant-title" data-parallax="0.22">评分</h2>
-                    <p class="quadrant-detail" data-parallax="0.5">主题、完成度、<br>表达与技术。</p>
+                    <p class="quadrant-detail" data-parallax="0.5">各队展示后互评<br>美术、创意、切题、完成度<br>评委作为单独队伍参与打分</p>
                   </div>
                 </div>
               </article>
@@ -1144,15 +1147,13 @@
         </div>
         <input id="tuneCoverBar" type="range" min="0" max="8" step="1" value="3" aria-label="Cover bottom line height">
         <div class="tuner-row">
-          <label for="tuneCoverGap">Gap</label>
-          <span class="tuner-value" id="tuneCoverGapValue">22px</span>
+          <span class="tuner-fixed">Gap</span>
+          <span class="tuner-value" id="tuneCoverGapFixed">32px</span>
         </div>
-        <input id="tuneCoverGap" type="range" min="0" max="80" step="1" value="22" aria-label="Cover content-to-bottom gap">
         <div class="tuner-row">
-          <label for="tuneCoverTextY">Text Y</label>
-          <span class="tuner-value" id="tuneCoverTextYValue">0px</span>
+          <span class="tuner-fixed">Text Y</span>
+          <span class="tuner-value" id="tuneCoverTextYFixed">0px</span>
         </div>
-        <input id="tuneCoverTextY" type="range" min="-160" max="80" step="1" value="0" aria-label="Cover text vertical translate">
         <div class="tuner-row">
           <label for="tuneCoverArtY">Image Y</label>
           <span class="tuner-value" id="tuneCoverArtYValue">0px</span>
@@ -1250,12 +1251,10 @@
   const tuneParticle = document.getElementById('tuneParticle');
   const tuneCenter = document.getElementById('tuneCenter');
   const tuneCoverBar = document.getElementById('tuneCoverBar');
-  const tuneCoverGap = document.getElementById('tuneCoverGap');
   const tuneCoverBarValue = document.getElementById('tuneCoverBarValue');
-  const tuneCoverGapValue = document.getElementById('tuneCoverGapValue');
-  const tuneCoverTextY = document.getElementById('tuneCoverTextY');
+  const tuneCoverGapFixed = document.getElementById('tuneCoverGapFixed');
+  const tuneCoverTextYFixed = document.getElementById('tuneCoverTextYFixed');
   const tuneCoverArtY = document.getElementById('tuneCoverArtY');
-  const tuneCoverTextYValue = document.getElementById('tuneCoverTextYValue');
   const tuneCoverArtYValue = document.getElementById('tuneCoverArtYValue');
   const tuneFeatherFixed = document.getElementById('tuneFeatherFixed');
   const tuneReadout = document.getElementById('tuneReadout');
@@ -1268,9 +1267,11 @@
     particle: '#242622',
     center: '#ffffff',
     coverBar: 3,
-    coverGap: 22,
-    coverTextY: 0,
     coverArtY: 0
+  });
+  const COVER_FIXED = Object.freeze({
+    gap: 32,
+    textY: 0
   });
   const FIXED = Object.freeze({
     blur: 2,
@@ -1322,8 +1323,6 @@
           ? saved.center
           : TUNE_DEFAULTS.center,
         coverBar: Math.round(clampNumber(saved.coverBar, 0, 8, TUNE_DEFAULTS.coverBar)),
-        coverGap: Math.round(clampNumber(saved.coverGap, 0, 80, TUNE_DEFAULTS.coverGap)),
-        coverTextY: Math.round(clampNumber(saved.coverTextY, -160, 80, TUNE_DEFAULTS.coverTextY)),
         coverArtY: Math.round(clampNumber(saved.coverArtY, -160, 80, TUNE_DEFAULTS.coverArtY))
       };
     } catch {
@@ -1859,12 +1858,12 @@
 
   function applyCoverLayout() {
     document.documentElement.style.setProperty('--cover-bar-height', `${tuning.coverBar}px`);
-    document.documentElement.style.setProperty('--cover-bottom-gap', `${tuning.coverGap}px`);
-    document.documentElement.style.setProperty('--cover-text-y', `${tuning.coverTextY}px`);
+    document.documentElement.style.setProperty('--cover-bottom-gap', `${COVER_FIXED.gap}px`);
+    document.documentElement.style.setProperty('--cover-text-y', `${COVER_FIXED.textY}px`);
     document.documentElement.style.setProperty('--cover-art-y', `${tuning.coverArtY}px`);
     tuneCoverBarValue.textContent = `${tuning.coverBar}px`;
-    tuneCoverGapValue.textContent = `${tuning.coverGap}px`;
-    tuneCoverTextYValue.textContent = `${tuning.coverTextY}px`;
+    tuneCoverGapFixed.textContent = `${COVER_FIXED.gap}px`;
+    tuneCoverTextYFixed.textContent = `${COVER_FIXED.textY}px`;
     tuneCoverArtYValue.textContent = `${tuning.coverArtY}px`;
   }
 
@@ -1882,8 +1881,6 @@
     tuneParticle.value = tuning.particle;
     tuneCenter.value = tuning.center;
     tuneCoverBar.value = String(tuning.coverBar);
-    tuneCoverGap.value = String(tuning.coverGap);
-    tuneCoverTextY.value = String(tuning.coverTextY);
     tuneCoverArtY.value = String(tuning.coverArtY);
     tuneFeatherFixed.textContent = String(FIXED.feather);
   }
@@ -1970,8 +1967,8 @@
       },
       cover: {
         barHeight: tuning.coverBar,
-        bottomGap: tuning.coverGap,
-        textY: tuning.coverTextY,
+        bottomGap: COVER_FIXED.gap,
+        textY: COVER_FIXED.textY,
         imageY: tuning.coverArtY
       },
       parallax: parallax
@@ -2026,20 +2023,6 @@
 
   tuneCoverBar.addEventListener('input', () => {
     tuning.coverBar = Number(tuneCoverBar.value);
-    applyCoverLayout();
-    refreshCoverMirror();
-    saveTuning();
-  });
-
-  tuneCoverGap.addEventListener('input', () => {
-    tuning.coverGap = Number(tuneCoverGap.value);
-    applyCoverLayout();
-    refreshCoverMirror();
-    saveTuning();
-  });
-
-  tuneCoverTextY.addEventListener('input', () => {
-    tuning.coverTextY = Number(tuneCoverTextY.value);
     applyCoverLayout();
     refreshCoverMirror();
     saveTuning();

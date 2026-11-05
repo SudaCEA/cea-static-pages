@@ -77,7 +77,7 @@ ellia-pages/
 - **逐元素淡入淡出**：`js/effects/fade.js` 读取元素上的 `data-fade`、`data-fade-in-delay`、`data-fade-out-delay`（毫秒），用 Web Animations 逐个执行 opacity 动画，基础时长 `220ms`。
 - **当前排版节奏**：封面按 `CEA GameJam` → `2026.10` → `参赛作品展示` → 三角占位 → 底部黑边依次进入；象限页按四个象限文本 → 中心 `镜` 依次进入；`机制`、`信息` 按 kicker → 标题 → 正文 → 侧栏/步骤/信息行 → footer 依次进入。离开时使用更短的独立延迟。整组动画结束后才解锁翻页。`prefers-reduced-motion` 下直接切换。
 - **文本间隙**：品牌与日期同一基线，行内间距约 `16–32px`；品牌/日期行与 `参赛作品展示` 之间约 `16–34px`。左文本与右占位之间使用固定响应式列距（约 `24–58px`），避免两列贴在一起。
-- **布局**：`cqw`/`cqh` 相对内容尺寸；封面分为左文本、右占位两列，底对齐。`--cover-bar-height` 控制底部黑边高度（默认 `3px`），`--cover-bottom-gap` 控制文本/占位到黑边的间距（默认 `22px`），`--cover-text-y` / `--cover-art-y` 分别移动文本组和占位。三角描边固定 `2px`；窄屏改为单列，占位放到文本下方并靠右。
+- **布局**：`cqw`/`cqh` 相对内容尺寸；封面分为左文本、右占位两列，底对齐。`--cover-bar-height` 控制底部黑边高度（默认 `3px`）；`--cover-bottom-gap` 固定为 `32px`，`--cover-text-y` 固定为 `0px`；只有 `--cover-art-y` 用来移动占位。三角描边固定 `2px`；窄屏改为单列，占位放到文本下方并靠右。
 - **配置**：`Copy config` 的 `deck` 段报告页数、当前页、`fadeDuration`、`fadeMode` 和 fade 元素数量；`cover` 段报告 `barHeight`、`bottomGap`、`textY`、`imageY`；`parallax` 段报告当前深度层，`quadrants` 段报告悬停象限、滤镜面板和圆环尺寸/速度参数。
 - **已知问题**：Chrome Beta 的 WebGL 侧边镜像在切页后可能保留上一页的 DOM 残影；中心 content 和翻页状态正常。这是 HTML-in-Canvas 捕获记录刷新的问题，后续需要单独处理 `mirror.js` 的纹理刷新。
 
@@ -85,7 +85,7 @@ ellia-pages/
 
 第二页（`data-slide="1"`）以页面中心为原点分成四个象限：左上 `时间`、右上 `主题`、左下 `限制`、右下 `评分`，中心是单独的 `镜`。
 
-- **分隔线与外框**：中心横/竖分隔线为 `3px`；四个象限的标题和正文不再带矩形外框。每个文本组从象限中心向对应的外角偏移约内容宽高的 `6%`（窄屏降到 `2.4%`），让中心更空。中心 `镜` 也不再带任何外框，保持单独的字形。
+- **分隔线与外框**：中心横/竖分隔线为 `3px`；四个象限的标题和正文不再带矩形外框。每个文本组从象限中心向对应的外角偏移：水平约内容宽度的 `6%`，垂直约 `5.2%`（窄屏降到 `2.4%`），让中心更空。中心 `镜` 也不再带任何外框，保持单独的字形。
 - **SVG 背板滤镜**：四个透明面板分别覆盖四个象限，使用 `backdrop-filter: url(#…)`。左上红 `#ff2b2b`、右上绿 `#00c853`、左下蓝 `#1f52ff`，都用 `feFlood + feBlend mode="screen"` 将深色墨迹推向对应颜色；白色在 screen 下保持白色，越深的像素着色越明显。右下用 `feColorMatrix saturate=0` 直接去饱和。颜色是高饱和混色，不是把每个像素强制替换成纯原色。
 - **鼠标指针**：保留原生光标，不替换、不隐藏；内容层内额外绘制一个浅灰圆环（`#9d9d9d`），圆心直接跟随真实指针，不再做位置平滑。圆环位于滤镜面板下方，因此跨象限时会被对应颜色重新着色；移出内容时圆环隐藏，原生光标保持可见。中心没有方框，圆环会继续显示在 `镜` 字下方。
 - **圆环速度响应**：静止或慢速时圆环直径约 `34px`、描边约 `5.5px`；速度升高时直径增大到约 `82px`，描边减薄到约 `1.1px`。速度值经过平滑和衰减，停止后圆环回到小而厚；位置本身直接贴住指针。
@@ -115,7 +115,7 @@ WebGL 默认走 1x direct 路径；`renderScale < 1` 时仍可走 composite 路�
 `mirror-2610/index.html` 右下角有一个悬浮 `TUNE / 2610` 面板，默认折叠：
 
 - 调整 `Particle`（粒子颜色，默认 `#242622`）和 `Center`（实心背景）颜色；直接更新 canvas，不重建 mirror
-- 调整封面 `Line`（底部黑边高度，默认 `3px`）、`Gap`（文本/占位到黑边的间距，默认 `22px`）、`Text Y`（默认 `0px`）和 `Image Y`（默认 `0px`）；分别写入 `--cover-bar-height`、`--cover-bottom-gap`、`--cover-text-y`、`--cover-art-y`。文本和占位各自独立位移；三角描边固定 `2px`
+- 调整封面 `Line`（底部黑边高度，默认 `3px`）和 `Image Y`（占位垂直位移，默认 `0px`）；`Gap` 固定 `32px`、`Text Y` 固定 `0px`，面板只显示只读值。`Line` / `Image Y` 写入 `--cover-bar-height` / `--cover-art-y`，固定值写入 `--cover-bottom-gap` / `--cover-text-y`；三角描边固定 `2px`
 - 固定 feather `72px`（两个后端一致）；面板只显示只读值，不提供调节
 - 固定参数不开放调整：blur `2.00`；WebGL `renderScale 1` / `contentScale 1`；SVG `mapScale 0.1` / `maxMR 1920x1080`
 - 显示 DPR、内容 CSS 尺寸、内容设备像素、canvas 输出尺寸

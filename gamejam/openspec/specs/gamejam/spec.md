@@ -277,7 +277,7 @@ The nested canvas SHALL update live through both the WebGL and SVG mirror backen
 
 The page SHALL provide a floating panel outside the mirror stage. It SHALL start collapsed in the bottom-right corner and open on demand.
 
-The panel SHALL adjust particle colour, centre colour, cover bottom-rule height, cover content-to-rule gap, and separate vertical translations for the cover lockup and sideview slot. Feather SHALL remain fixed at 72px. It SHALL show the backend and layout sizes, and provide `Copy config`, `Reset`, `localStorage`, and a collapse toggle.
+The panel SHALL adjust particle colour, centre colour, cover bottom-rule height, and the sideview slot's vertical translation. The cover content-to-rule gap SHALL remain fixed at 32px and the text translation at 0. Feather SHALL remain fixed at 72px. It SHALL show backend/layout sizes and provide `Copy config`, `Reset`, `localStorage`, and a collapse toggle.
 
 #### Scenario: Starts collapsed
 
@@ -294,17 +294,17 @@ The panel SHALL adjust particle colour, centre colour, cover bottom-rule height,
 
 #### Scenario: Cover spacing changes live
 
-- **WHEN** the line, gap, text-Y, or image-Y control changes
-- **THEN** the bottom-rule height, the content-to-rule gap, or the selected translate updates
-- **AND** text translate moves only the text lockup
+- **WHEN** the line or image-Y control changes
+- **THEN** the bottom-rule height or the sideview translation updates
+- **AND** the content-to-rule gap stays `32px` and the text lockup stays at `0` vertical translation
 - **AND** image translate moves only the sideview slot
 - **AND** the sideview stroke stays fixed at 2px
 
 #### Scenario: Fixed settings are not editable
 
 - **WHEN** the panel is inspected
-- **THEN** it contains no fade, blur, WebGL scale, SVG map, or feather controls
-- **AND** it shows the fixed feather of `72`
+- **THEN** it contains no fade, blur, WebGL scale, SVG map, feather, cover-gap, or text-translate controls
+- **AND** it shows the fixed feather of `72`, cover gap of `32px`, and text translation of `0px`
 - **AND** `Copy config` reports the fixed backend values, deck state, cover bottom-rule/gap/translations, parallax depths, and quadrant filter/pointer settings
 
 #### Scenario: Feather is fixed
@@ -316,7 +316,8 @@ The panel SHALL adjust particle colour, centre colour, cover bottom-rule height,
 #### Scenario: Reset restores defaults
 
 - **WHEN** the reset action is used
-- **THEN** the adjustable colours and cover spacing return to defaults
+- **THEN** the adjustable colours, bottom-rule height, and image translation return to defaults
+- **AND** the fixed cover gap remains `32px` and the fixed text translation remains `0px`
 - **AND** the active mirror receives the fixed feather `72` and the fixed backend options
 - **AND** the content field receives the default centre and particle colours
 - **AND** the saved tuning value is replaced with defaults
@@ -324,7 +325,8 @@ The panel SHALL adjust particle colour, centre colour, cover bottom-rule height,
 #### Scenario: Tuning persists
 
 - **WHEN** a visitor reloads the page after changing panel values
-- **THEN** the saved colours and cover spacing are restored
+- **THEN** the saved colours, bottom-rule height, and image translation are restored
+- **AND** the cover gap is still `32px` and the text translation is still `0px`
 - **AND** the mirror is created with the fixed feather `72`
 - **AND** the content field starts with those values
 
@@ -437,7 +439,7 @@ The content area SHALL present four mirrored slides: a cover, a quadrant page, a
 
 - **WHEN** the quadrant slide is rendered
 - **THEN** its titles and centre mark use a display-serif scale substantially larger than the detail copy
-- **AND** the detail copy is large enough to wrap across multiple lines
+- **AND** the detail copy spans multiple lines and wraps when space is tight
 - **AND** neither the title nor the detail crosses the centre rules
 
 #### Scenario: Corner offsets
@@ -466,6 +468,7 @@ The content area SHALL present four mirrored slides: a cover, a quadrant page, a
 - **AND** the text lockup and sideview slot are bottom aligned
 - **AND** the brand/date line, the title, and the two columns have breathing room rather than sitting flush
 - **AND** a black rule (3px by default) spans the content bottom below the lockup and placeholder
+- **AND** the rule sits `32px` below the lowest cover content
 
 #### Scenario: Cover fade order
 

@@ -252,7 +252,7 @@ def assert_structure(page):
     )
     check(cover["rule"][1] >= content_bottom - 1,
           f"cover bottom rule overlaps the content: {cover}")
-    check(abs(cover["rule"][1] - content_bottom - 22) <= 1,
+    check(abs(cover["rule"][1] - content_bottom - 32) <= 1,
           f"cover default bottom gap is wrong: {cover}")
     check(cover["borderTop"] == "0px" and cover["borderBottom"] == "0px",
           f"cover has an extra edge: {cover}")
@@ -354,6 +354,20 @@ def assert_quadrant_page(page):
           f"quadrant names: {data['unitNames']}")
     check(data["titles"] == ["时间", "主题", "限制", "评分"],
           f"quadrant titles: {data['titles']}")
+    expected_details = [
+        ["10月23日到10月25日", "传统 48 小时 GameJam 模式"],
+        ["镜", "光路的魔术", "从镜中看到怎样的玩法？", "从镜中诞生怎样的世界？"],
+        [
+            "美术呈现只能使用不多于三个色相",
+            "鼓励用简洁的颜色凸显玩法与创意",
+            "保留可供风格化的发挥空间",
+        ],
+        ["各队展示后互评", "美术、创意、切题、完成度", "评委作为单独队伍参与打分"],
+    ]
+    for index, fragments in enumerate(expected_details):
+        for fragment in fragments:
+            check(fragment in data["details"][index],
+                  f"quadrant {index} detail copy is missing {fragment!r}: {data['details'][index]}")
     check(all("serif" in font.lower() for font in data["titleFonts"]),
           f"quadrant titles are not serif: {data['titleFonts']}")
     check(all(align == "center" for align in data["titleAligns"]),
@@ -361,8 +375,8 @@ def assert_quadrant_page(page):
     widths = [rect[2] for rect in data["frameRects"]]
     check(len(widths) == 4 and max(widths) - min(widths) <= 0.5,
           f"quadrant frames are not equal width: {data['frameRects']}")
-    check(all(abs(r[3] - 104) <= 1 for r in data["frameRects"]),
-          f"quadrant copy blocks are not equal height: {data['frameRects']}")
+    check(all(r[3] >= 104 for r in data["frameRects"]),
+          f"quadrant copy blocks collapsed below their minimum height: {data['frameRects']}")
     check(all(width == "0px" for width in data["frameBorders"]),
           f"quadrant copy still has a visible outer border: {data['frameBorders']}")
     check(all(background == "rgba(0, 0, 0, 0)"
@@ -599,9 +613,12 @@ def assert_cover_tuning(page):
             value,
         )
 
+    check(page.locator("#tuneCoverGap").count() == 0,
+          "cover gap should be fixed, not adjustable")
+    check(page.locator("#tuneCoverTextY").count() == 0,
+          "cover text translate should be fixed, not adjustable")
+
     set_cover("tuneCoverBar", 6)
-    set_cover("tuneCoverGap", 40)
-    set_cover("tuneCoverTextY", 0)
     set_cover("tuneCoverArtY", 0)
     page.wait_for_timeout(220)
     baseline = page.evaluate(
@@ -611,18 +628,21 @@ def assert_cover_tuning(page):
           const brand = cover.querySelector('.cover-brand-text').getBoundingClientRect();
           const side = cover.querySelector('.cover-side').getBoundingClientRect();
           const rule = cover.querySelector('.cover-rule').getBoundingClientRect();
+          const rootStyle = getComputedStyle(document.documentElement);
           return {
             brandTop: brand.top,
             sideTop: side.top,
             ruleHeight: rule.height,
             bottomGap: rule.top - Math.max(lockup.bottom, side.bottom),
+            gapVar: rootStyle.getPropertyValue('--cover-bottom-gap').trim(),
+            textYVar: rootStyle.getPropertyValue('--cover-text-y').trim(),
             lineWidth: getComputedStyle(
               cover.querySelector('.cover-side path')
             ).strokeWidth,
             readout: [
               document.getElementById('tuneCoverBarValue').textContent,
-              document.getElementById('tuneCoverGapValue').textContent,
-              document.getElementById('tuneCoverTextYValue').textContent,
+              document.getElementById('tuneCoverGapFixed').textContent,
+              document.getElementById('tuneCoverTextYFixed').textContent,
               document.getElementById('tuneCoverArtYValue').textContent
             ]
           };
@@ -630,28 +650,14 @@ def assert_cover_tuning(page):
     )
     check(abs(baseline["ruleHeight"] - 6) <= 0.5,
           f"cover bottom line height did not update: {baseline}")
-    check(abs(baseline["bottomGap"] - 40) <= 1,
-          f"cover bottom gap did not update: {baseline}")
+    check(abs(baseline["bottomGap"] - 32) <= 1,
+          f"cover bottom gap is not fixed at 32px: {baseline}")
+    check(baseline["gapVar"] == "32px" and baseline["textYVar"] == "0px",
+          f"fixed cover CSS variables are wrong: {baseline}")
     check(baseline["lineWidth"] == "2px",
           f"bottom-line control changed the placeholder stroke: {baseline}")
-    check(baseline["readout"] == ["6px", "40px", "0px", "0px"],
+    check(baseline["readout"] == ["6px", "32px", "0px", "0px"],
           f"cover tuning readout did not update: {baseline}")
-
-    set_cover("tuneCoverTextY", 20)
-    page.wait_for_timeout(160)
-    text_shift = page.evaluate(
-        """() => {
-          const cover = document.querySelector('.slide-cover');
-          return {
-            brandTop: cover.querySelector('.cover-brand-text').getBoundingClientRect().top,
-            sideTop: cover.querySelector('.cover-side').getBoundingClientRect().top
-          };
-        }"""
-    )
-    check(abs((text_shift["brandTop"] - baseline["brandTop"]) - 20) <= 1,
-          f"text translate did not move the lockup: {baseline} -> {text_shift}")
-    check(abs(text_shift["sideTop"] - baseline["sideTop"]) <= 1,
-          f"text translate moved the sideview slot: {baseline} -> {text_shift}")
 
     set_cover("tuneCoverArtY", -18)
     page.wait_for_timeout(160)
@@ -664,10 +670,10 @@ def assert_cover_tuning(page):
           };
         }"""
     )
-    check(abs(image_shift["brandTop"] - text_shift["brandTop"]) <= 1,
-          f"image translate moved the text: {text_shift} -> {image_shift}")
-    check(abs((text_shift["sideTop"] - image_shift["sideTop"]) - 18) <= 1,
-          f"image translate did not move the placeholder: {text_shift} -> {image_shift}")
+    check(abs(image_shift["brandTop"] - baseline["brandTop"]) <= 1,
+          f"image translate moved the fixed text: {baseline} -> {image_shift}")
+    check(abs((baseline["sideTop"] - image_shift["sideTop"]) - 18) <= 1,
+          f"image translate did not move the placeholder: {baseline} -> {image_shift}")
 
     page.locator("#tuneReset").click()
     page.wait_for_timeout(220)
@@ -677,15 +683,12 @@ def assert_cover_tuning(page):
           const lockup = cover.querySelector('.cover-lockup').getBoundingClientRect();
           const side = cover.querySelector('.cover-side').getBoundingClientRect();
           const rule = cover.querySelector('.cover-rule').getBoundingClientRect();
+          const rootStyle = getComputedStyle(document.documentElement);
           return {
-            barHeight: getComputedStyle(document.documentElement)
-              .getPropertyValue('--cover-bar-height').trim(),
-            bottomGap: getComputedStyle(document.documentElement)
-              .getPropertyValue('--cover-bottom-gap').trim(),
-            textY: getComputedStyle(document.documentElement)
-              .getPropertyValue('--cover-text-y').trim(),
-            imageY: getComputedStyle(document.documentElement)
-              .getPropertyValue('--cover-art-y').trim(),
+            barHeight: rootStyle.getPropertyValue('--cover-bar-height').trim(),
+            bottomGap: rootStyle.getPropertyValue('--cover-bottom-gap').trim(),
+            textY: rootStyle.getPropertyValue('--cover-text-y').trim(),
+            imageY: rootStyle.getPropertyValue('--cover-art-y').trim(),
             actualRule: rule.height,
             actualGap: rule.top - Math.max(lockup.bottom, side.bottom),
             lineWidth: getComputedStyle(
@@ -693,22 +696,26 @@ def assert_cover_tuning(page):
             ).strokeWidth,
             inputs: [
               document.getElementById('tuneCoverBar').value,
-              document.getElementById('tuneCoverGap').value,
-              document.getElementById('tuneCoverTextY').value,
               document.getElementById('tuneCoverArtY').value
+            ],
+            fixed: [
+              document.getElementById('tuneCoverGapFixed').textContent,
+              document.getElementById('tuneCoverTextYFixed').textContent
             ]
           };
         }"""
     )
-    check(reset["barHeight"] == "3px" and reset["bottomGap"] == "22px",
+    check(reset["barHeight"] == "3px" and reset["bottomGap"] == "32px",
           f"cover tuning reset failed: {reset}")
     check(reset["textY"] == "0px" and reset["imageY"] == "0px",
           f"cover translate reset failed: {reset}")
     check(abs(reset["actualRule"] - 3) <= 0.5 and
-          abs(reset["actualGap"] - 22) <= 1 and reset["lineWidth"] == "2px",
+          abs(reset["actualGap"] - 32) <= 1 and reset["lineWidth"] == "2px",
           f"cover reset did not restore the line/gap: {reset}")
-    check(reset["inputs"] == ["3", "22", "0", "0"],
+    check(reset["inputs"] == ["3", "0"],
           f"cover reset did not restore the sliders: {reset}")
+    check(reset["fixed"] == ["32px", "0px"],
+          f"cover reset changed the fixed readouts: {reset}")
     print("cover tuning: ok")
 
 
@@ -755,7 +762,7 @@ def assert_config(page):
     check(config["feather"] == 72, f"copy config feather: {config}")
     check(config["renderScale"] == 1, f"copy config render scale: {config}")
     check(config.get("cover") == {
-        "barHeight": 3, "bottomGap": 22, "textY": 0, "imageY": 0
+        "barHeight": 3, "bottomGap": 32, "textY": 0, "imageY": 0
     }, f"copy config cover layout: {config.get('cover')}")
 
 
