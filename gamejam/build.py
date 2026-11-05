@@ -11,16 +11,25 @@ This file is source-only and is never copied into dist/gamejam/.
 from __future__ import annotations
 
 REQUIRED_RUNTIME = (
-    "js/mirror.js",
-    "js/three-bundle-loader.js",
-    "js/three.bundle.js",
-    "js/vendor/three.core.js",
-    "js/vendor/three.module.js",
+    "mirror-2610/index.html",
+    "mirror-2610/mirror-lab.html",
+    "mirror-2610/content-field.js",
+    "js/effects/mirror.js",
+    "js/effects/fade.js",
+    "js/effects/parallax.js",
+    "libs/three/three-bundle-loader.js",
+    "libs/three/three.bundle.js",
+    "libs/three/vendor/three.core.js",
+    "libs/three/vendor/three.module.js",
 )
 
 # The minified bundle is ~740 KiB. A much smaller file means the generated
 # artifact was truncated or replaced with an error page.
 MIN_BUNDLE_BYTES = 500_000
+
+BUNDLE = "libs/three/three.bundle.js"
+BUNDLE_ENTRY = "libs/three/src/three-bundle-entry.js"
+LAB_PAGE = "mirror-2610/mirror-lab.html"
 
 # These must never leak into the deployed page.
 FORBIDDEN_STAGE_PATHS = (
@@ -28,7 +37,12 @@ FORBIDDEN_STAGE_PATHS = (
     "build.py",
     "page.toml",
     ".gitignore",
-    "js/three-bundle-entry.js",
+    "libs/three/src",
+    "libs/three/three-bundle-entry.js",
+    "js/mirror.js",
+    "js/three.bundle.js",
+    "js/three-bundle-loader.js",
+    "js/vendor",
     "js/__pycache__",
     "tools/__pycache__",
 )
@@ -46,25 +60,25 @@ def prebuild(ctx) -> None:
             "missing runtime files: " + ", ".join(sorted(missing))
         )
 
-    bundle = ctx.source / "js" / "three.bundle.js"
+    bundle = ctx.source / BUNDLE
     if bundle.stat().st_size < MIN_BUNDLE_BYTES:
         raise RuntimeError(
-            f"js/three.bundle.js looks truncated ({bundle.stat().st_size} bytes); "
+            f"{BUNDLE} looks truncated ({bundle.stat().st_size} bytes); "
             "run tools/build-three-bundle.ps1"
         )
 
-    entry_source = ctx.source / "js" / "three-bundle-entry.js"
+    entry_source = ctx.source / BUNDLE_ENTRY
     if entry_source.is_file() and bundle.stat().st_mtime + 60 < entry_source.stat().st_mtime:
         ctx.warn(
-            "js/three.bundle.js is older than js/three-bundle-entry.js; "
+            f"{BUNDLE} is older than {BUNDLE_ENTRY}; "
             "run tools/build-three-bundle.ps1"
         )
 
-    lab = ctx.source / "mirror-lab.html"
+    lab = ctx.source / LAB_PAGE
     if lab.is_file():
         lab_text = lab.read_text(encoding="utf-8")
         if "three-bundle-loader.js" not in lab_text:
-            ctx.warn("mirror-lab.html no longer imports js/three-bundle-loader.js")
+            ctx.warn(f"{LAB_PAGE} no longer imports the three bundle loader")
 
     ctx.log(f"validated {len(REQUIRED_RUNTIME)} required runtime files")
 

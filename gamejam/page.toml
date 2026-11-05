@@ -2,20 +2,23 @@
 # Runtime files are copied to dist/gamejam/. Source-only helpers stay behind.
 
 name = "gamejam"
-title = "GAMEJAM 2026 — 镜湖 / MIRROR LAKE"
+title = "ELLIA PAGES — GAMEJAM 2026"
 entry = "index.html"
 
-# Copy the real page, the lab page, and the runtime JavaScript tree.
-# Remove "mirror-lab.html" here if a production-only build is preferred.
+# The root index is a directory page; mirror-2610 holds the mirror homepage
+# and the diagnostic lab. Shared effects and three live outside page folders.
 include = [
   "index.html",
-  "mirror-lab.html",
-  "js/**",
+  "mirror-2610/**",
+  "js/effects/**",
+  "libs/three/**",
 ]
 
-# three-bundle-entry.js is the esbuild input, not a browser asset.
+# libs/three/src is the esbuild input, not a browser asset.
 exclude = [
-  "js/three-bundle-entry.js",
-  "js/**/*.map",
+  "libs/three/src/**",
+  "js/effects/**/*.map",
+  "libs/three/**/*.map",
   "js/**/__pycache__/**",
+  "libs/**/__pycache__/**",
 ]

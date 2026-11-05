@@ -1,0 +1,2545 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="description" content="Mirror 2610 — a reflection study built with mirror.js.">
+<title>MIRROR / 2610 — 镜像</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23080a09'/%3E%3Ccircle cx='32' cy='32' r='19' fill='none' stroke='%23d84a33'/%3E%3Cpath d='M19 32h26' stroke='%23e8dfca'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --paper:#eee7d6;
+    --red:#d84a33;
+    --mono:"SFMono-Regular","Cascadia Mono","Roboto Mono",Consolas,monospace;
+    --sans:"Helvetica Neue","Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Songti SC","Noto Serif CJK SC","Source Han Serif SC","Times New Roman",serif;
+    /* Cover-only spacing controls. The tuning panel writes these at runtime. */
+    --cover-bar-height:3px;
+    --cover-bottom-gap:22px;
+    --cover-text-y:0px;
+    --cover-art-y:0px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    overflow:hidden;
+    /* The page backdrop is cleared; the content rectangle owns the surface. */
+    background:transparent;
+    color:#0b0d0b;
+    font-family:var(--mono);
+  }
+
+  .stage{
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+  }
+
+  /* mirror.js creates this frame; make container units track the art size. */
+  .mirror-content{container-type:size}
+
+  .art{
+    position:relative;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    border:0;
+    /* Static fallback if the particle canvas cannot start. The canvas covers
+       it when the field is active. */
+    background:#ffffff;
+  }
+  /* The native cursor stays visible on every slide; the quadrant page only
+     adds a tinted speed-reactive ring around it. */
+
+
+  /* Nested particle canvas. mirror.js captures this as ordinary DOM content:
+     it must not be a drawable root and must stay free of CSS transforms,
+     filters, opacity, and blend modes. */
+  .content-field{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    display:block;
+    z-index:0;
+    pointer-events:none;
+  }
+  .art.is-field-fallback{background:#ffffff}
+
+  /* Full-size mirrored slide deck above the particle surface. Transitions only
+     change opacity/visibility; the content rectangle and canvas stay fixed. */
+  .deck{
+    position:absolute;
+    inset:0;
+    z-index:1;
+    overflow:hidden;
+    color:#0a0a0a;
+  }
+  .slide{
+    position:absolute;
+    inset:0;
+    display:grid;
+    padding:clamp(26px,4.8cqw,68px) clamp(24px,5.2cqw,76px) clamp(24px,4.4cqw,60px);
+    visibility:hidden;
+    pointer-events:none;
+  }
+  .slide.is-active{
+    visibility:visible;
+    pointer-events:auto;
+  }
+  .slide-inner{
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+    height:100%;
+  }
+  .slide-kicker{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:1rem;
+    padding-bottom:clamp(10px,1.8cqh,18px);
+    border-bottom:1px solid #0a0a0a;
+  }
+  .micro{
+    color:#0a0a0a;
+    font:400 clamp(8px,.78cqw,10px)/1.35 var(--mono);
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+  .slide-kicker .micro:first-child{font-variant-numeric:tabular-nums}
+  /* Cover: a bottom-left type lockup with the date inline, and a blank
+     triangular ellia / sideview slot at the bottom-right. There are no text
+     frames; the only linework belongs to the image placeholder. */
+  .slide-cover{
+    padding:clamp(14px,2.2cqw,36px) clamp(14px,2.4cqw,38px)
+      calc(var(--cover-bar-height) + var(--cover-bottom-gap));
+  }
+  .slide-cover .slide-inner{
+    display:grid;
+    grid-template-columns:minmax(0,1.38fr) minmax(0,.9fr);
+    align-items:end;
+    gap:clamp(24px,4.2cqw,58px);
+    height:100%;
+    min-height:0;
+  }
+  .cover-lockup{
+    min-width:0;
+    align-self:end;
+    translate:0 var(--cover-text-y);
+  }
+  .cover-meta{
+    display:flex;
+    align-items:baseline;
+    gap:clamp(16px,2.2cqw,32px);
+    margin:0 0 clamp(16px,2.8cqw,34px);
+  }
+  .cover-brand-text{
+    font:700 clamp(28px,4.2cqw,54px)/1 var(--serif);
+    letter-spacing:-.045em;
+    text-align:left;
+    white-space:nowrap;
+  }
+  .cover-date{
+    margin:0;
+    font:600 clamp(15px,2.2cqw,28px)/1 var(--serif);
+    letter-spacing:-.02em;
+    font-variant-numeric:lining-nums tabular-nums;
+    text-align:left;
+    white-space:nowrap;
+  }
+  .cover-title{
+    margin:0;
+    font:600 clamp(48px,8.4cqw,142px)/.9 var(--serif);
+    letter-spacing:-.055em;
+    text-align:left;
+    white-space:nowrap;
+  }
+  .cover-side{
+    position:relative;
+    width:100%;
+    max-width:560px;
+    aspect-ratio:1.55;
+    margin:0;
+    justify-self:end;
+    align-self:end;
+    translate:0 var(--cover-art-y);
+  }
+  .cover-side svg{
+    display:block;
+    width:100%;
+    height:100%;
+    overflow:visible;
+    color:#0a0a0a;
+  }
+  .cover-side path{
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2px;
+    vector-effect:non-scaling-stroke;
+  }
+  .cover-rule{
+    position:absolute;
+    right:0;
+    bottom:0;
+    left:0;
+    z-index:2;
+    display:block;
+    height:var(--cover-bar-height);
+    background:#0a0a0a;
+    pointer-events:none;
+  }
+
+  /* Quadrant page: a 2×2 field around one centre mark. The colour panels are
+     real backdrop filters. Their SVG definitions screen a tint into dark ink,
+     so white areas stay white and darker lines/text take the strongest colour. */
+  .slide-quadrants{
+    padding:0;
+    overflow:hidden;
+    background:transparent;
+  }
+  .quadrant-filter-defs{
+    position:absolute;
+    width:0;
+    height:0;
+    overflow:hidden;
+    pointer-events:none;
+  }
+  .quadrant-stage{
+    position:absolute;
+    inset:0;
+    isolation:isolate;
+    --quad-axis:#171717;
+    --quad-rule:#9b9b9b;
+    --quad-pointer-size:clamp(42px,5.8cqw,72px);
+    --quadrant-shift-x:clamp(22px,6cqw,76px);
+    --quadrant-shift-y:clamp(16px,6cqh,48px);
+  }
+  .quadrant-rule{
+    position:absolute;
+    z-index:0;
+    display:block;
+    background:var(--quad-axis);
+    pointer-events:none;
+  }
+  .quadrant-rule-x{
+    top:50%;
+    left:0;
+    width:100%;
+    height:3px;
+    transform:translateY(-1.5px);
+  }
+  .quadrant-rule-y{
+    top:0;
+    left:50%;
+    width:3px;
+    height:100%;
+    transform:translateX(-1.5px);
+  }
+  .quadrant-content{
+    position:absolute;
+    inset:0;
+    z-index:1;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr) minmax(0,1fr);
+    pointer-events:none;
+  }
+  .quadrant{
+    display:grid;
+    place-items:center;
+    min-width:0;
+    min-height:0;
+    padding:clamp(12px,2.6cqw,32px);
+  }
+  .quadrant-frame{
+    position:relative;
+    display:grid;
+    place-items:center;
+    width:min(72%, 280px);
+    height:clamp(104px,16cqh,128px);
+    padding:clamp(12px,2.2cqw,26px) clamp(10px,2.4cqw,28px);
+    background:transparent;
+  }
+  /* Push each copy group away from the origin toward its outer corner. Only
+     the copy block moves; the rules, filters, and centre mark stay put. */
+  .quadrant-time .quadrant-frame{
+    translate:calc(var(--quadrant-shift-x) * -1) calc(var(--quadrant-shift-y) * -1);
+  }
+  .quadrant-theme .quadrant-frame{
+    translate:var(--quadrant-shift-x) calc(var(--quadrant-shift-y) * -1);
+  }
+  .quadrant-limit .quadrant-frame{
+    translate:calc(var(--quadrant-shift-x) * -1) var(--quadrant-shift-y);
+  }
+  .quadrant-score .quadrant-frame{
+    translate:var(--quadrant-shift-x) var(--quadrant-shift-y);
+  }
+  .quadrant-copy{
+    grid-area:1/1;
+    display:grid;
+    place-items:center;
+    width:100%;
+    max-width:22ch;
+    text-align:center;
+  }
+  .quadrant-title,
+  .quadrant-detail{
+    grid-area:1/1;
+    margin:0;
+    text-align:center;
+    color:#0a0a0a;
+    text-wrap:balance;
+    will-change:transform;
+  }
+  .quadrant-title{
+    font:500 clamp(40.5px,6.3cqw,75px)/1.04 var(--serif);
+    letter-spacing:.05em;
+    transition:opacity .22s ease;
+  }
+  .quadrant-detail{
+    max-width:19ch;
+    font:400 clamp(21px,2.4cqw,28.5px)/1.5 var(--serif);
+    letter-spacing:.025em;
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .22s ease,visibility .22s;
+  }
+  .quadrant.is-hot .quadrant-title{opacity:0}
+  .quadrant.is-hot .quadrant-detail{
+    opacity:1;
+    visibility:visible;
+  }
+
+  /* A light-grey ring around the native cursor. It sits below the
+     backdrop-filter panels, so each quadrant paints it with that quadrant's
+     tint. The circle is centred on the wrapper; size and stroke are updated
+     from pointer speed. */
+  .quadrant-pointer{
+    position:absolute;
+    top:0;
+    left:0;
+    z-index:2;
+    width:0;
+    height:0;
+    color:#9d9d9d;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .16s ease;
+    --quad-ring-size:34px;
+    --quad-ring-stroke:5.5px;
+  }
+  .quadrant-pointer.is-visible{opacity:1}
+  .quadrant-pointer-ring{
+    position:absolute;
+    top:0;
+    left:0;
+    width:var(--quad-ring-size);
+    height:var(--quad-ring-size);
+    box-sizing:border-box;
+    border:var(--quad-ring-stroke) solid currentColor;
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    will-change:width,height,border-width;
+  }
+
+  /* Filter panels sit above the labels, pointer, and centre mark. They are
+     transparent; only the backdrop receives the screen/grayscale operation. */
+  .quadrant-filter{
+    position:absolute;
+    z-index:4;
+    width:50%;
+    height:50%;
+    background:transparent;
+    pointer-events:none;
+  }
+  .quadrant-filter-red{
+    top:0;
+    left:0;
+    -webkit-backdrop-filter:url(#quad-tint-red);
+    backdrop-filter:url(#quad-tint-red);
+  }
+  .quadrant-filter-green{
+    top:0;
+    right:0;
+    -webkit-backdrop-filter:url(#quad-tint-green);
+    backdrop-filter:url(#quad-tint-green);
+  }
+  .quadrant-filter-blue{
+    bottom:0;
+    left:0;
+    -webkit-backdrop-filter:url(#quad-tint-blue);
+    backdrop-filter:url(#quad-tint-blue);
+  }
+  .quadrant-filter-gray{
+    right:0;
+    bottom:0;
+    -webkit-backdrop-filter:url(#quad-tint-gray);
+    backdrop-filter:url(#quad-tint-gray);
+  }
+
+  .quadrant-center{
+    position:absolute;
+    top:50%;
+    left:50%;
+    z-index:3;
+    display:grid;
+    place-items:center;
+    width:clamp(104px,12.8cqw,170px);
+    aspect-ratio:1;
+    background:transparent;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+  }
+  .quadrant-center-word{
+    margin:0;
+    font:600 clamp(93px,12.3cqw,162px)/1 var(--serif);
+    letter-spacing:-.05em;
+    color:#0a0a0a;
+    will-change:transform;
+  }
+
+  .slide-foot{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    padding-top:clamp(10px,1.8cqh,18px);
+    border-top:1px solid #0a0a0a;
+  }
+  .slide-foot .micro:last-child{text-align:right}
+  .slide-content{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:clamp(18px,3.2cqh,32px);
+    padding:clamp(20px,3.8cqh,48px) 0;
+    min-height:0;
+  }
+  .headline{
+    max-width:22ch;
+    margin:0;
+    font:600 clamp(28px,4.5cqw,60px)/1.08 var(--sans);
+    letter-spacing:-.045em;
+  }
+  .body-copy{
+    max-width:48ch;
+    margin:0;
+    font:400 clamp(13px,1.2cqw,16px)/1.78 var(--sans);
+    letter-spacing:.01em;
+  }
+  .split{
+    flex:1;
+    display:grid;
+    grid-template-columns:minmax(0,1.3fr) minmax(210px,.7fr);
+    align-items:start;
+    gap:clamp(28px,5cqw,74px);
+    padding:clamp(22px,4cqh,48px) 0;
+    min-height:0;
+  }
+  .split-main{
+    display:flex;
+    flex-direction:column;
+    gap:clamp(18px,3cqh,30px);
+  }
+  .side-list{
+    border-top:1px solid #0a0a0a;
+  }
+  .side-list div{
+    display:grid;
+    grid-template-columns:2.4em minmax(0,1fr) auto;
+    gap:12px;
+    align-items:baseline;
+    padding:clamp(9px,1.6cqh,14px) 0;
+    border-bottom:1px solid #0a0a0a;
+  }
+  .side-list strong{
+    font:400 clamp(14px,1.35cqw,17px)/1.3 var(--sans);
+    font-weight:500;
+  }
+  .steps{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:clamp(16px,2.8cqw,34px);
+  }
+  .step{
+    min-width:0;
+    padding-top:12px;
+    border-top:1px solid #0a0a0a;
+  }
+  .step h3{
+    margin:8px 0 10px;
+    font:500 clamp(17px,1.8cqw,24px)/1.2 var(--sans);
+    letter-spacing:-.02em;
+  }
+  .step p{
+    margin:0;
+    font:400 clamp(12px,1.05cqw,14px)/1.65 var(--sans);
+  }
+  .info-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:0 clamp(24px,4cqw,60px);
+    border-top:1px solid #0a0a0a;
+  }
+  .info-grid div{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:16px;
+    padding:clamp(9px,1.8cqh,14px) 0;
+    border-bottom:1px solid #0a0a0a;
+  }
+  .info-grid strong{
+    font:400 clamp(13px,1.2cqw,16px)/1.35 var(--sans);
+    font-weight:500;
+    text-align:right;
+  }
+  .end-mark{
+    display:block;
+    width:clamp(6px,.7cqw,9px);
+    height:clamp(6px,.7cqw,9px);
+    background:#0a0a0a;
+  }
+
+  .deck-controls{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:60;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    padding:clamp(14px,2.2vw,26px) clamp(14px,2.4vw,32px);
+    pointer-events:none;
+  }
+  .deck-button{
+    pointer-events:auto;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:40px;
+    height:34px;
+    min-width:0;
+    padding:0;
+    border:1px solid #0a0a0a;
+    border-radius:0;
+    background:#ffffff;
+    color:#0a0a0a;
+    font:400 16px/1 var(--mono);
+    cursor:pointer;
+    transition:background-color .15s ease,color .15s ease;
+  }
+  .deck-button:hover:not(:disabled){
+    background:#0a0a0a;
+    color:#ffffff;
+  }
+  .deck-button:disabled{opacity:.26;cursor:default}
+  .deck-button:focus-visible{outline:2px solid #0a0a0a;outline-offset:3px}
+  .deck-arrow{font-size:16px;line-height:1;letter-spacing:0}
+
+  @media (max-width:700px){
+    .slide{padding:22px 20px 24px}
+    .slide-cover{
+      padding:8px 8px calc(var(--cover-bar-height) + var(--cover-bottom-gap));
+    }
+    .slide-cover .slide-inner{
+      grid-template-columns:minmax(0,1fr);
+      align-content:end;
+      gap:14px;
+    }
+    .cover-meta{gap:10px;margin-bottom:10px}
+    .cover-brand-text{font-size:clamp(18px,6.4cqw,28px)}
+    .cover-date{font-size:clamp(11px,3.8cqw,18px)}
+    .cover-title{font-size:clamp(30px,12.2cqw,60px)}
+    .cover-side{width:62%;max-width:320px;justify-self:end}
+    .headline{font-size:clamp(25px,6.8cqw,40px)}
+    .slide-foot .micro{font-size:7px;letter-spacing:.08em}
+    .slide-quadrants{padding:0}
+    .quadrant-stage{
+      --quadrant-shift-x:clamp(5px,2.4cqw,18px);
+      --quadrant-shift-y:clamp(5px,2.4cqh,18px);
+    }
+    .quadrant{padding:6px}
+    .quadrant-frame{
+      width:min(92%, 150px);
+      height:58px;
+      padding:8px 6px;
+    }
+    .quadrant-title{
+      font-size:clamp(27px,10.5cqw,45px);
+      letter-spacing:.02em;
+    }
+    .quadrant-detail{
+      max-width:15ch;
+      font-size:clamp(13.5px,4.65cqw,18px);
+      line-height:1.42;
+    }
+    .quadrant-center{
+      width:clamp(64px,23cqw,104px);
+    }
+    .quadrant-center-word{
+      font-size:clamp(60px,21cqw,96px);
+    }
+    .quadrant-stage{--quad-pointer-size:clamp(30px,10cqw,44px)}
+    .info-grid{grid-template-columns:1fr}
+    .split{
+      grid-template-columns:1fr;
+      gap:clamp(18px,3.2cqh,30px);
+      padding:18px 0;
+    }
+    .side-list div{padding:9px 0}
+    .steps{
+      grid-template-columns:1fr;
+      gap:0;
+    }
+    .step{
+      display:grid;
+      grid-template-columns:2.2em minmax(0,1fr);
+      column-gap:10px;
+      padding:9px 0;
+    }
+    .step .micro{grid-row:span 2;padding-top:2px}
+    .step h3{margin:0 0 4px;font-size:16px}
+    .step p{font-size:12px}
+    .slide-foot{padding-top:9px}
+  }
+  @media (max-width:560px){
+    .deck-controls{padding:12px}
+    .deck-button{
+      width:36px;
+      height:32px;
+      min-height:0;
+      padding:0;
+      font-size:15px;
+    }
+    .deck-arrow{font-size:15px}
+    .tuner{top:auto;right:12px;bottom:12px;width:calc(100vw - 24px);max-height:calc(100vh - 24px)}
+    .tuner-body{max-height:62vh}
+  }
+  @media (hover:none), (pointer:coarse){
+    .quadrant-pointer{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .deck-button{transition-duration:.01ms}
+    .quadrant-pointer,
+    .quadrant-title,
+    .quadrant-detail{transition-duration:.01ms}
+  }
+
+  /* The WebGL composite draws its own full-resolution edge skirt, so there is
+     no DOM seam overlay here. */
+
+  /* Floating tuning panel: outside the mirror stage, never captured. */
+  .tuner{
+    position:fixed;
+    top:auto;
+    right:16px;
+    bottom:16px;
+    z-index:70;
+    width:min(312px,calc(100vw - 32px));
+    max-height:calc(100vh - 32px);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    border:1px solid rgba(232,223,202,.16);
+    border-radius:16px;
+    background:rgba(17,23,19,.93);
+    box-shadow:0 24px 70px -24px #000;
+    -webkit-backdrop-filter:blur(14px);
+    backdrop-filter:blur(14px);
+    color:var(--paper);
+    font-family:var(--mono);
+    font-size:10px;
+  }
+  .tuner.is-collapsed{width:auto}
+  .tuner-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:10px 12px;
+    border-bottom:1px solid rgba(232,223,202,.12);
+    flex:0 0 auto;
+  }
+  .tuner-title{
+    color:var(--red);
+    font-size:9px;
+    letter-spacing:.2em;
+  }
+  .tuner-toggle{
+    width:24px;
+    height:24px;
+    padding:0;
+    border:1px solid rgba(232,223,202,.22);
+    border-radius:50%;
+    background:transparent;
+    color:var(--paper);
+    font:14px/1 var(--mono);
+    cursor:pointer;
+  }
+  .tuner-toggle:hover{background:rgba(232,223,202,.08)}
+  .tuner-body{
+    display:grid;
+    gap:14px;
+    padding:12px;
+    overflow:auto;
+  }
+  .tuner-body[hidden]{display:none}
+  .tuner-section{display:grid;gap:6px}
+  .tuner-label{
+    margin:0;
+    color:rgba(232,223,202,.48);
+    font-size:8px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  .tuner-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    min-height:24px;
+  }
+  .tuner-row label{color:rgba(232,223,202,.72)}
+  .tuner-value{
+    color:var(--paper);
+    font-variant-numeric:tabular-nums;
+  }
+  .tuner input[type="range"]{
+    width:100%;
+    height:16px;
+    margin:0;
+    accent-color:var(--red);
+  }
+  .tuner input[type="color"]{
+    width:32px;
+    height:22px;
+    padding:0;
+    border:1px solid rgba(232,223,202,.22);
+    border-radius:5px;
+    background:transparent;
+    cursor:pointer;
+  }
+  .tuner select,
+  .tuner input[type="text"]{
+    min-height:26px;
+    padding:0 7px;
+    border:1px solid rgba(232,223,202,.2);
+    border-radius:7px;
+    background:#0b0f0c;
+    color:var(--paper);
+    font:10px/1 var(--mono);
+  }
+  .tuner select:disabled,
+  .tuner input:disabled{
+    opacity:.35;
+    cursor:not-allowed;
+  }
+  .tuner-readout{
+    padding-top:10px;
+    border-top:1px solid rgba(232,223,202,.12);
+    color:rgba(232,223,202,.54);
+    font-size:9px;
+    line-height:1.7;
+    white-space:pre-line;
+  }
+  .tuner-actions{
+    display:flex;
+    gap:8px;
+    padding-top:2px;
+  }
+  .tuner-actions button{
+    flex:1;
+    min-height:32px;
+    padding:0 9px;
+    border:1px solid rgba(232,223,202,.22);
+    border-radius:8px;
+    background:transparent;
+    color:var(--paper);
+    font:9px/1 var(--mono);
+    letter-spacing:.06em;
+    cursor:pointer;
+  }
+  .tuner-actions button:hover{background:rgba(232,223,202,.08)}
+  .tuner-actions button:first-child{
+    border-color:var(--red);
+    background:var(--red);
+    color:#0b0d0b;
+  }
+  .tuner-actions button:first-child:hover{background:#e35a42}
+  .tuner-status{
+    min-height:12px;
+    margin:0;
+    color:rgba(232,223,202,.42);
+    font-size:8px;
+    letter-spacing:.05em;
+  }
+  .tuner button:focus-visible,
+  .tuner input:focus-visible,
+  .tuner select:focus-visible{
+    outline:2px solid var(--red);
+    outline-offset:2px;
+  }
+
+  /* Boot progress and the preflight question share one full-screen layer. */
+  .boot{
+    position:fixed;
+    inset:0;
+    z-index:80;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:auto;
+    padding:clamp(24px,5vw,64px);
+    background:#ffffff;
+    color:#0a0a0a;
+    transition:opacity .25s ease,visibility .25s ease;
+  }
+  .boot.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
+  .boot-inner{
+    width:min(560px,100%);
+    margin:auto;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+  }
+  .boot-progress{
+    grid-area:1/1;
+    align-self:center;
+    display:grid;
+    gap:16px;
+    opacity:1;
+    visibility:visible;
+    transition:opacity .25s ease,visibility .25s ease;
+  }
+  .boot-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:16px;
+  }
+  .boot-status{
+    font:11px/1.2 var(--mono);
+    letter-spacing:.2em;
+    text-transform:uppercase;
+  }
+  .boot-percent{
+    font:11px/1 var(--mono);
+    letter-spacing:.08em;
+    font-variant-numeric:tabular-nums;
+  }
+  .boot-track{
+    height:10px;
+    border:1px solid #0a0a0a;
+    overflow:hidden;
+    background:#ffffff;
+  }
+  .boot-bar{
+    display:block;
+    width:100%;
+    height:100%;
+    background:#0a0a0a;
+    transform:scaleX(0);
+    transform-origin:left center;
+    transition:transform .2s ease;
+  }
+  .boot-bar.indeterminate{
+    width:32%;
+    transform:translateX(-110%);
+    animation:bootIndeterminate 1.1s ease-in-out infinite;
+  }
+  .boot-detail{
+    min-height:1.5em;
+    margin:0;
+    color:#5c5c5c;
+    font:11px/1.5 var(--mono);
+    letter-spacing:.03em;
+  }
+  .boot.is-error .boot-track{border-color:#0a0a0a}
+  .boot.is-error .boot-bar{background:#0a0a0a}
+  @keyframes bootIndeterminate{
+    from{transform:translateX(-110%)}
+    to{transform:translateX(320%)}
+  }
+
+  /* Preflight question: a centered square panel that crossfades with the
+     loading progress, never a separate modal that could outlive the cover. */
+  .boot-question{
+    grid-area:1/1;
+    align-self:center;
+    display:grid;
+    gap:14px;
+    padding:clamp(18px,3.5vw,26px);
+    border:1px solid #0a0a0a;
+    background:#ffffff;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transition:opacity .25s ease,visibility .25s ease;
+  }
+  .boot.is-question .boot-progress{opacity:0;visibility:hidden}
+  .boot.is-question .boot-question{opacity:1;visibility:visible;pointer-events:auto}
+  .boot-question[hidden]{display:none}
+  .question-title{
+    margin:0;
+    font:600 clamp(20px,3.2vw,26px)/1.25 var(--sans);
+    letter-spacing:-.01em;
+  }
+  .question-body{
+    margin:0;
+    color:#333333;
+    font:13px/1.75 var(--sans);
+    letter-spacing:.01em;
+    white-space:pre-line;
+  }
+  .question-note{
+    margin:0;
+    padding-top:12px;
+    border-top:1px solid #d8d8d8;
+    color:#5c5c5c;
+    font:11px/1.65 var(--mono);
+    letter-spacing:.02em;
+    white-space:pre-line;
+  }
+  .question-note[hidden]{display:none}
+  .question-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:2px;
+  }
+  .question-button{
+    min-height:42px;
+    padding:0 18px;
+    border:1px solid #0a0a0a;
+    border-radius:0;
+    background:#ffffff;
+    color:#0a0a0a;
+    font:11px/1.2 var(--mono);
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background-color .15s ease,color .15s ease;
+  }
+  .question-button.primary{
+    background:#0a0a0a;
+    color:#ffffff;
+  }
+  .question-button.primary:hover{
+    background:#ffffff;
+    color:#0a0a0a;
+  }
+  .question-button.secondary:hover{
+    background:#0a0a0a;
+    color:#ffffff;
+  }
+  .question-button:focus-visible{
+    outline:2px solid #0a0a0a;
+    outline-offset:2px;
+  }
+
+  @media (max-width:560px){
+    .boot{padding:20px}
+    .question-actions{flex-direction:column}
+    .question-button{width:100%}
+  }
+
+  @media (max-height:560px){
+    .boot{padding:20px}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .boot,.boot-progress,.boot-question,.boot-bar,.question-button{transition-duration:.01ms}
+    .boot-bar.indeterminate{animation-duration:.01ms}
+  }
+</style>
+<noscript><style>.boot{display:none}</style></noscript>
+</head>
+<body aria-busy="true">
+  <main class="stage" id="stage">
+    <article class="art" id="art" aria-label="MIRROR / 2610 内容">
+      <canvas class="content-field" id="contentField" aria-hidden="true"></canvas>
+      <div class="deck" id="deck">
+        <section class="slide slide-cover is-active" data-slide="0" aria-roledescription="slide" aria-label="封面">
+          <div class="slide-inner">
+            <div class="cover-lockup">
+              <div class="cover-meta">
+                <span class="cover-brand-text" data-fade data-fade-in-delay="0" data-fade-out-delay="70">CEA GameJam</span>
+                <span class="cover-date" data-fade data-fade-in-delay="70" data-fade-out-delay="45">2026.10</span>
+              </div>
+              <h1 class="cover-title" data-fade data-fade-in-delay="140" data-fade-out-delay="20">参赛作品展示</h1>
+            </div>
+            <figure class="cover-side" data-fade data-fade-in-delay="190" data-fade-out-delay="10" aria-label="ellia sideview 图片占位">
+              <svg viewBox="0 0 100 64" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                <path d="M1 63 L99 1 L99 63 Z"/>
+              </svg>
+            </figure>
+          </div>
+          <div class="cover-rule" data-fade data-fade-in-delay="230" data-fade-out-delay="0" aria-hidden="true"></div>
+        </section>
+
+        <section class="slide slide-quadrants" data-slide="1" aria-roledescription="slide" aria-label="四个象限" aria-hidden="true">
+          <svg class="quadrant-filter-defs" width="0" height="0" aria-hidden="true" focusable="false">
+            <defs>
+              <!-- Screen keeps white white and lets dark ink take the tint. -->
+              <filter id="quad-tint-red" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+                <feFlood flood-color="#ff2b2b" result="tint"/>
+                <feBlend in="SourceGraphic" in2="tint" mode="screen"/>
+              </filter>
+              <filter id="quad-tint-green" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+                <feFlood flood-color="#00c853" result="tint"/>
+                <feBlend in="SourceGraphic" in2="tint" mode="screen"/>
+              </filter>
+              <filter id="quad-tint-blue" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+                <feFlood flood-color="#1f52ff" result="tint"/>
+                <feBlend in="SourceGraphic" in2="tint" mode="screen"/>
+              </filter>
+              <!-- Grayscale is a plain saturation removal, not a tint. -->
+              <filter id="quad-tint-gray" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+                <feColorMatrix in="SourceGraphic" type="saturate" values="0"/>
+              </filter>
+            </defs>
+          </svg>
+
+          <div class="quadrant-stage" id="quadrantStage">
+            <span class="quadrant-rule quadrant-rule-x" aria-hidden="true"></span>
+            <span class="quadrant-rule quadrant-rule-y" aria-hidden="true"></span>
+
+            <div class="quadrant-content">
+              <article class="quadrant quadrant-time" data-quadrant="time">
+                <div class="quadrant-frame" data-fade data-fade-in-delay="0" data-fade-out-delay="70">
+                  <div class="quadrant-copy">
+                    <h2 class="quadrant-title" data-parallax="0.22">时间</h2>
+                    <p class="quadrant-detail" data-parallax="0.5">从第一笔开始，<br>在有限时间里完成。</p>
+                  </div>
+                </div>
+              </article>
+
+              <article class="quadrant quadrant-theme" data-quadrant="theme">
+                <div class="quadrant-frame" data-fade data-fade-in-delay="45" data-fade-out-delay="55">
+                  <div class="quadrant-copy">
+                    <h2 class="quadrant-title" data-parallax="0.22">主题</h2>
+                    <p class="quadrant-detail" data-parallax="0.5">镜不是答案，<br>是一种观看方式。</p>
+                  </div>
+                </div>
+              </article>
+
+              <article class="quadrant quadrant-limit" data-quadrant="limit">
+                <div class="quadrant-frame" data-fade data-fade-in-delay="90" data-fade-out-delay="40">
+                  <div class="quadrant-copy">
+                    <h2 class="quadrant-title" data-parallax="0.22">限制</h2>
+                    <p class="quadrant-detail" data-parallax="0.5">不用外部图像，<br>让页面自己发声。</p>
+                  </div>
+                </div>
+              </article>
+
+              <article class="quadrant quadrant-score" data-quadrant="score">
+                <div class="quadrant-frame" data-fade data-fade-in-delay="135" data-fade-out-delay="25">
+                  <div class="quadrant-copy">
+                    <h2 class="quadrant-title" data-parallax="0.22">评分</h2>
+                    <p class="quadrant-detail" data-parallax="0.5">主题、完成度、<br>表达与技术。</p>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div class="quadrant-filter quadrant-filter-red" aria-hidden="true"></div>
+            <div class="quadrant-filter quadrant-filter-green" aria-hidden="true"></div>
+            <div class="quadrant-filter quadrant-filter-blue" aria-hidden="true"></div>
+            <div class="quadrant-filter quadrant-filter-gray" aria-hidden="true"></div>
+
+            <div class="quadrant-center" data-fade data-fade-in-delay="180" data-fade-out-delay="0">
+              <h2 class="quadrant-center-word" data-parallax="0.9">镜</h2>
+            </div>
+
+            <div class="quadrant-pointer" id="quadrantPointer" aria-hidden="true">
+              <span class="quadrant-pointer-ring"></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" data-slide="2" aria-roledescription="slide" aria-label="机制" aria-hidden="true">
+          <div class="slide-inner">
+            <header class="slide-kicker" data-fade data-fade-in-delay="0" data-fade-out-delay="60">
+              <span class="micro">02 / Mechanism</span>
+              <span class="micro">移动与停留</span>
+            </header>
+            <div class="slide-content">
+              <h2 class="headline" data-fade data-fade-in-delay="40" data-fade-out-delay="45">移动，等待，辨认。</h2>
+              <p class="body-copy" data-fade data-fade-in-delay="100" data-fade-out-delay="30">镜像不会立刻回应。每一次移动都会留下短暂的延迟，等静止之后，画面才慢慢追上你的位置。</p>
+              <div class="steps">
+                <article class="step" data-fade data-fade-in-delay="140" data-fade-out-delay="50">
+                  <span class="micro">01</span>
+                  <h3>移动</h3>
+                  <p>让指针改变反射的重心。</p>
+                </article>
+                <article class="step" data-fade data-fade-in-delay="180" data-fade-out-delay="35">
+                  <span class="micro">02</span>
+                  <h3>等待</h3>
+                  <p>给延迟一点时间，让图像抵达。</p>
+                </article>
+                <article class="step" data-fade data-fade-in-delay="220" data-fade-out-delay="20">
+                  <span class="micro">03</span>
+                  <h3>辨认</h3>
+                  <p>在失真的表面里，找一个稳定的点。</p>
+                </article>
+              </div>
+            </div>
+            <footer class="slide-foot" data-fade data-fade-in-delay="260" data-fade-out-delay="0">
+              <span class="micro">Move / Wait / Read</span>
+              <span class="micro">02 — 04</span>
+            </footer>
+          </div>
+        </section>
+
+        <section class="slide" data-slide="3" aria-roledescription="slide" aria-label="信息" aria-hidden="true">
+          <div class="slide-inner">
+            <header class="slide-kicker" data-fade data-fade-in-delay="0" data-fade-out-delay="60">
+              <span class="micro">03 / Info</span>
+              <span class="micro">MIRROR / 2610</span>
+            </header>
+            <div class="slide-content">
+              <h2 class="headline" data-fade data-fade-in-delay="40" data-fade-out-delay="45">进入镜像。</h2>
+              <p class="body-copy" data-fade data-fade-in-delay="100" data-fade-out-delay="30">这是一个可以在浏览器里直接观看的反射实验。没有目标，也没有隐藏关卡。你可以用滚轮或顶部的箭头继续。</p>
+              <div class="info-grid">
+                <div data-fade data-fade-in-delay="130" data-fade-out-delay="40"><span class="micro">Format</span><strong>Interactive study</strong></div>
+                <div data-fade data-fade-in-delay="170" data-fade-out-delay="30"><span class="micro">Surface</span><strong>Canvas + DOM</strong></div>
+                <div data-fade data-fade-in-delay="210" data-fade-out-delay="20"><span class="micro">Year</span><strong>2026</strong></div>
+                <div data-fade data-fade-in-delay="250" data-fade-out-delay="10"><span class="micro">Entry</span><strong>Mirror / 2610</strong></div>
+              </div>
+            </div>
+            <footer class="slide-foot" data-fade data-fade-in-delay="290" data-fade-out-delay="0">
+              <span class="micro">Gamejam / 2026</span>
+              <span class="micro">End / 04</span>
+            </footer>
+          </div>
+        </section>
+      </div>
+    </article>
+  </main>
+
+  <nav class="deck-controls" id="deckControls" aria-label="幻灯片导航" inert>
+    <button class="deck-button deck-prev" id="deckPrev" type="button" aria-label="上一页">
+      <span class="deck-arrow" aria-hidden="true">←</span>
+    </button>
+    <button class="deck-button deck-next" id="deckNext" type="button" aria-label="下一页">
+      <span class="deck-arrow" aria-hidden="true">→</span>
+    </button>
+  </nav>
+
+  <aside class="tuner is-collapsed" id="tuner" aria-label="Mirror tuning panel">
+    <header class="tuner-head">
+      <span class="tuner-title">TUNE / 2610</span>
+      <button class="tuner-toggle" id="tuneToggle" type="button" aria-expanded="false" aria-controls="tuneBody">+</button>
+    </header>
+    <div class="tuner-body" id="tuneBody" hidden>
+      <section class="tuner-section">
+        <p class="tuner-label">Cover</p>
+        <div class="tuner-row">
+          <label for="tuneCoverBar">Line</label>
+          <span class="tuner-value" id="tuneCoverBarValue">3px</span>
+        </div>
+        <input id="tuneCoverBar" type="range" min="0" max="8" step="1" value="3" aria-label="Cover bottom line height">
+        <div class="tuner-row">
+          <label for="tuneCoverGap">Gap</label>
+          <span class="tuner-value" id="tuneCoverGapValue">22px</span>
+        </div>
+        <input id="tuneCoverGap" type="range" min="0" max="80" step="1" value="22" aria-label="Cover content-to-bottom gap">
+        <div class="tuner-row">
+          <label for="tuneCoverTextY">Text Y</label>
+          <span class="tuner-value" id="tuneCoverTextYValue">0px</span>
+        </div>
+        <input id="tuneCoverTextY" type="range" min="-160" max="80" step="1" value="0" aria-label="Cover text vertical translate">
+        <div class="tuner-row">
+          <label for="tuneCoverArtY">Image Y</label>
+          <span class="tuner-value" id="tuneCoverArtYValue">0px</span>
+        </div>
+        <input id="tuneCoverArtY" type="range" min="-160" max="80" step="1" value="0" aria-label="Cover image vertical translate">
+      </section>
+
+      <section class="tuner-section">
+        <p class="tuner-label">Surface</p>
+        <div class="tuner-row">
+          <label for="tuneParticle">Particle</label>
+          <input id="tuneParticle" type="color" value="#242622" aria-label="Rising particle color">
+        </div>
+        <div class="tuner-row">
+          <label for="tuneCenter">Center</label>
+          <input id="tuneCenter" type="color" value="#ffffff" aria-label="Center background color">
+        </div>
+      </section>
+
+      <section class="tuner-section">
+        <p class="tuner-label">Mirror</p>
+        <div class="tuner-row">
+          <span>Feather</span>
+          <span class="tuner-value" id="tuneFeatherFixed">72</span>
+        </div>
+        <div class="tuner-row">
+          <span>Backend</span>
+          <span class="tuner-value" id="tuneMode">—</span>
+        </div>
+      </section>
+
+      <div class="tuner-readout" id="tuneReadout">waiting for backend…</div>
+
+      <div class="tuner-actions">
+        <button id="tuneCopy" type="button">Copy config</button>
+        <button id="tuneReset" type="button">Reset</button>
+      </div>
+      <p class="tuner-status" id="tuneStatus"></p>
+    </div>
+  </aside>
+
+  <div class="boot" id="boot">
+    <div class="boot-inner">
+      <div class="boot-progress" role="status" aria-live="polite">
+        <div class="boot-head">
+          <span class="boot-status" id="bootStatus">LOADING THREE</span>
+          <span class="boot-percent" id="bootPercent">0%</span>
+        </div>
+        <div class="boot-track" id="bootTrack" role="progressbar" aria-label="three.js 加载进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span class="boot-bar" id="bootBar"></span>
+        </div>
+        <p class="boot-detail" id="bootDetail">Fetching three.bundle.js…</p>
+      </div>
+
+      <section class="boot-question" id="bootQuestion" role="dialog" aria-modal="true" aria-labelledby="questionTitle" aria-describedby="questionBody" hidden>
+        <h2 class="question-title" id="questionTitle"></h2>
+        <p class="question-body" id="questionBody"></p>
+        <p class="question-note" id="questionNote" hidden></p>
+        <div class="question-actions" id="questionActions"></div>
+      </section>
+    </div>
+  </div>
+
+<script type="module">
+  import { createMirror, checkHtmlInCanvasSupport } from '../js/effects/mirror.js';
+  import { fadeIn, fadeOut } from '../js/effects/fade.js';
+  import { createParallax } from '../js/effects/parallax.js';
+  import { loadThreeBundle } from '../libs/three/three-bundle-loader.js';
+  import { createContentField, PARTICLE_DEFAULTS } from './content-field.js';
+
+  const stage = document.getElementById('stage');
+  const art = document.getElementById('art');
+  const contentCanvas = document.getElementById('contentField');
+  const deckControls = document.getElementById('deckControls');
+  const deckPrev = document.getElementById('deckPrev');
+  const deckNext = document.getElementById('deckNext');
+  const slides = [...document.querySelectorAll('#deck .slide')];
+  const quadrantStage = document.getElementById('quadrantStage');
+  const quadrantPointer = document.getElementById('quadrantPointer');
+  const quadrantSlides = [...document.querySelectorAll('#deck .slide-quadrants')];
+  const boot = document.getElementById('boot');
+  const bootStatus = document.getElementById('bootStatus');
+  const bootPercent = document.getElementById('bootPercent');
+  const bootTrack = document.getElementById('bootTrack');
+  const bootBar = document.getElementById('bootBar');
+  const bootDetail = document.getElementById('bootDetail');
+  const bootQuestion = document.getElementById('bootQuestion');
+  const questionTitle = document.getElementById('questionTitle');
+  const questionBody = document.getElementById('questionBody');
+  const questionNote = document.getElementById('questionNote');
+  const questionActions = document.getElementById('questionActions');
+  const tuneBody = document.getElementById('tuneBody');
+  const tuneToggle = document.getElementById('tuneToggle');
+  const tuneMode = document.getElementById('tuneMode');
+  const tuneParticle = document.getElementById('tuneParticle');
+  const tuneCenter = document.getElementById('tuneCenter');
+  const tuneCoverBar = document.getElementById('tuneCoverBar');
+  const tuneCoverGap = document.getElementById('tuneCoverGap');
+  const tuneCoverBarValue = document.getElementById('tuneCoverBarValue');
+  const tuneCoverGapValue = document.getElementById('tuneCoverGapValue');
+  const tuneCoverTextY = document.getElementById('tuneCoverTextY');
+  const tuneCoverArtY = document.getElementById('tuneCoverArtY');
+  const tuneCoverTextYValue = document.getElementById('tuneCoverTextYValue');
+  const tuneCoverArtYValue = document.getElementById('tuneCoverArtYValue');
+  const tuneFeatherFixed = document.getElementById('tuneFeatherFixed');
+  const tuneReadout = document.getElementById('tuneReadout');
+  const tuneCopy = document.getElementById('tuneCopy');
+  const tuneReset = document.getElementById('tuneReset');
+  const tuneStatus = document.getElementById('tuneStatus');
+
+  const TUNE_KEY = 'mirror-2610:tune:v5';
+  const TUNE_DEFAULTS = Object.freeze({
+    particle: '#242622',
+    center: '#ffffff',
+    coverBar: 3,
+    coverGap: 22,
+    coverTextY: 0,
+    coverArtY: 0
+  });
+  const FIXED = Object.freeze({
+    blur: 2,
+    feather: 72,
+    renderScale: 1,
+    contentScale: 1,
+    mapScale: 0.1,
+    maxMR: '1920x1080'
+  });
+  const DECK_FADE_DURATION = 220;
+  const DECK_WHEEL_THRESHOLD = 36;
+  const DECK_WHEEL_LOCK_MS = 850;
+  const QUADRANT_SLIDE = 1;
+  const QUADRANT_RING_MIN_SIZE = 34;
+  const QUADRANT_RING_MAX_SIZE = 82;
+  const QUADRANT_RING_MAX_STROKE = 5.5;
+  const QUADRANT_RING_MIN_STROKE = 1.1;
+  const QUADRANT_RING_SPEED_CAP = 1500;
+  const QUADRANT_RING_SPEED_SMOOTHING = 10;
+  const QUADRANT_RING_SPEED_DECAY = 6.5;
+  const PARALLAX_MAX_SHIFT = 24;
+  const PARALLAX_SMOOTHING = 9;
+
+  let slideIndex = 0;
+  let deckLocked = false;
+  let deckWheelAccum = 0;
+  let deckWheelLastAt = 0;
+  let deckWheelLockedUntil = 0;
+  let parallax = null;
+  let quadrantPage = null;
+
+  function clampNumber(value, min, max, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number)
+      ? Math.min(max, Math.max(min, number))
+      : fallback;
+  }
+
+  function loadTuning() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(TUNE_KEY) || 'null');
+      if (!saved || typeof saved !== 'object') return { ...TUNE_DEFAULTS };
+
+      return {
+        particle: typeof saved.particle === 'string' && /^#[0-9a-f]{6}$/i.test(saved.particle)
+          ? saved.particle
+          : TUNE_DEFAULTS.particle,
+        center: typeof saved.center === 'string' && /^#[0-9a-f]{6}$/i.test(saved.center)
+          ? saved.center
+          : TUNE_DEFAULTS.center,
+        coverBar: Math.round(clampNumber(saved.coverBar, 0, 8, TUNE_DEFAULTS.coverBar)),
+        coverGap: Math.round(clampNumber(saved.coverGap, 0, 80, TUNE_DEFAULTS.coverGap)),
+        coverTextY: Math.round(clampNumber(saved.coverTextY, -160, 80, TUNE_DEFAULTS.coverTextY)),
+        coverArtY: Math.round(clampNumber(saved.coverArtY, -160, 80, TUNE_DEFAULTS.coverArtY))
+      };
+    } catch {
+      return { ...TUNE_DEFAULTS };
+    }
+  }
+
+  let tuning = loadTuning();
+  let tuneSaveTimer = 0;
+
+  function saveTuning() {
+    clearTimeout(tuneSaveTimer);
+    tuneSaveTimer = setTimeout(() => {
+      try { localStorage.setItem(TUNE_KEY, JSON.stringify(tuning)); } catch {}
+    }, 120);
+  }
+
+  function setTuneStatus(text) {
+    tuneStatus.textContent = text || '';
+    clearTimeout(setTuneStatus.timer);
+    if (text) setTuneStatus.timer = setTimeout(() => {
+      tuneStatus.textContent = '';
+    }, 1800);
+  }
+
+  function reducedMotion() {
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+  }
+
+  function syncDeckControls() {
+    deckPrev.disabled = deckLocked || slideIndex === 0;
+    deckNext.disabled = deckLocked || slideIndex === slides.length - 1;
+  }
+
+  function goToSlide(index) {
+    if (
+      deckLocked ||
+      index === slideIndex ||
+      index < 0 ||
+      index >= slides.length
+    ) {
+      return false;
+    }
+
+    deckLocked = true;
+    syncDeckControls();
+    const outgoing = slides[slideIndex];
+    const incoming = slides[index];
+    const reduce = reducedMotion();
+    if (slideIndex === QUADRANT_SLIDE) quadrantPage?.deactivate();
+    outgoing.setAttribute('aria-hidden', 'true');
+
+    fadeOut(outgoing, {
+      duration: DECK_FADE_DURATION,
+      reducedMotion: reduce
+    })
+      .then(() => {
+        outgoing.classList.remove('is-active');
+        incoming.classList.add('is-active');
+        incoming.setAttribute('aria-hidden', 'false');
+        slideIndex = index;
+        quadrantPage?.sync();
+        syncDeckControls();
+        return fadeIn(incoming, {
+          duration: DECK_FADE_DURATION,
+          reducedMotion: reduce
+        });
+      })
+      .then(() => {
+        deckLocked = false;
+        syncDeckControls();
+      })
+      .catch((error) => {
+        console.error(error);
+        deckLocked = false;
+        syncDeckControls();
+      });
+
+    return true;
+  }
+
+  function onDeckWheel(event) {
+    if (event.defaultPrevented) return;
+    if (event.target instanceof Element && event.target.closest('.tuner')) {
+      return;
+    }
+    const unit = event.deltaMode === 1
+      ? 16
+      : event.deltaMode === 2
+        ? window.innerHeight
+        : 1;
+    const delta = event.deltaY * unit;
+    if (!delta) return;
+    event.preventDefault();
+
+    const now = performance.now();
+    if (now < deckWheelLockedUntil) return;
+    if (now - deckWheelLastAt > 180) deckWheelAccum = 0;
+    deckWheelLastAt = now;
+    deckWheelAccum += delta;
+    if (Math.abs(deckWheelAccum) < DECK_WHEEL_THRESHOLD) return;
+
+    const direction = deckWheelAccum > 0 ? 1 : -1;
+    deckWheelAccum = 0;
+    deckWheelLockedUntil = now + DECK_WHEEL_LOCK_MS;
+    goToSlide(slideIndex + direction);
+  }
+
+  function onDeckKeydown(event) {
+    if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      (target.isContentEditable ||
+        /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName))
+    ) {
+      return;
+    }
+
+    if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(event.key)) {
+      event.preventDefault();
+      goToSlide(slideIndex + 1);
+    } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(event.key)) {
+      event.preventDefault();
+      goToSlide(slideIndex - 1);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      goToSlide(0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      goToSlide(slides.length - 1);
+    }
+  }
+
+  deckPrev.addEventListener('click', () => goToSlide(slideIndex - 1));
+  deckNext.addEventListener('click', () => goToSlide(slideIndex + 1));
+  window.addEventListener('wheel', onDeckWheel, { passive: false });
+  window.addEventListener('keydown', onDeckKeydown);
+
+  slides.forEach((slide, index) => {
+    slide.setAttribute('aria-hidden', index === 0 ? 'false' : 'true');
+  });
+  syncDeckControls();
+
+  const deckApi = {
+    get index() { return slideIndex; },
+    get count() { return slides.length; },
+    get locked() { return deckLocked; },
+    goTo: goToSlide,
+    next: () => goToSlide(slideIndex + 1),
+    previous: () => goToSlide(slideIndex - 1),
+    getState: () => ({
+      index: slideIndex,
+      count: slides.length,
+      locked: deckLocked,
+      fadeDuration: DECK_FADE_DURATION,
+      fadeMode: 'staggered',
+      active: slides[slideIndex]?.dataset.slide ?? null
+    })
+  };
+
+  function initQuadrantPage() {
+    if (!quadrantStage || !quadrantPointer) return null;
+
+    const units = [...quadrantStage.querySelectorAll('[data-quadrant]')];
+    const center = quadrantStage.querySelector('.quadrant-center');
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const media = window.matchMedia?.('(prefers-reduced-motion: reduce)') || null;
+    const state = {
+      active: false,
+      inside: false,
+      shown: false,
+      hover: null,
+      inCenter: false,
+      x: 0,
+      y: 0,
+      targetX: 0,
+      targetY: 0,
+      clientX: 0,
+      clientY: 0,
+      pointerType: '',
+      lastPointerX: 0,
+      lastPointerY: 0,
+      lastMoveAt: 0,
+      speed: 0,
+      speedTarget: 0,
+      ringSize: QUADRANT_RING_MIN_SIZE,
+      ringStroke: QUADRANT_RING_MAX_STROKE,
+      raf: 0,
+      lastNow: 0,
+      frames: 0,
+      reducedMotion: media ? media.matches : false
+    };
+
+    const maxShiftPx = Math.min(
+      PARALLAX_MAX_SHIFT,
+      Math.max(8, Math.round(window.innerWidth * 0.02))
+    );
+    parallax = createParallax(art, {
+      maxShiftPx,
+      smoothing: PARALLAX_SMOOTHING,
+      selector: '#deck .slide-quadrants [data-parallax]'
+    });
+
+    function setHover(next) {
+      if (state.hover === next) return;
+      state.hover = next;
+      for (const unit of units) {
+        unit.classList.toggle(
+          'is-hot',
+          state.active && next !== null && unit.dataset.quadrant === next
+        );
+      }
+    }
+
+    function applyPointer() {
+      quadrantPointer.style.transform =
+        `translate3d(${state.x.toFixed(2)}px, ${state.y.toFixed(2)}px, 0)`;
+    }
+
+    function applyRing() {
+      const t = Math.min(1, Math.max(0, state.speed / QUADRANT_RING_SPEED_CAP));
+      const eased = t * t * (3 - 2 * t);
+      state.ringSize = QUADRANT_RING_MIN_SIZE +
+        (QUADRANT_RING_MAX_SIZE - QUADRANT_RING_MIN_SIZE) * eased;
+      state.ringStroke = QUADRANT_RING_MAX_STROKE -
+        (QUADRANT_RING_MAX_STROKE - QUADRANT_RING_MIN_STROKE) * eased;
+      quadrantPointer.style.setProperty(
+        '--quad-ring-size',
+        `${state.ringSize.toFixed(2)}px`
+      );
+      quadrantPointer.style.setProperty(
+        '--quad-ring-stroke',
+        `${state.ringStroke.toFixed(2)}px`
+      );
+    }
+
+    function resetRing() {
+      state.speed = 0;
+      state.speedTarget = 0;
+      state.lastMoveAt = 0;
+      state.lastNow = 0;
+      applyRing();
+    }
+
+    function hidePointer() {
+      state.shown = false;
+      quadrantPointer.classList.remove('is-visible');
+      setHover(null);
+      if (state.raf) cancelAnimationFrame(state.raf);
+      state.raf = 0;
+      state.inCenter = false;
+      resetRing();
+    }
+
+    function schedule() {
+      if (
+        state.raf ||
+        !state.active ||
+        !state.inside ||
+        state.reducedMotion ||
+        document.hidden
+      ) {
+        return;
+      }
+      state.raf = requestAnimationFrame(tick);
+    }
+
+    function tick(now) {
+      state.raf = 0;
+      if (!state.active || !state.inside) return;
+
+      const dt = state.lastNow > 0
+        ? Math.min(0.05, Math.max(0, (now - state.lastNow) / 1000))
+        : 0;
+      state.lastNow = now;
+      state.speedTarget *= Math.exp(-dt * QUADRANT_RING_SPEED_DECAY);
+      const amount = 1 - Math.exp(
+        -Math.max(0.0001, dt) * QUADRANT_RING_SPEED_SMOOTHING
+      );
+      state.speed += (state.speedTarget - state.speed) * amount;
+      if (Math.abs(state.speedTarget - state.speed) < 0.25) {
+        state.speed = state.speedTarget;
+      }
+      applyRing();
+
+      state.frames += 1;
+      if (state.speed > 1.5 || state.speedTarget > 1) {
+        schedule();
+      } else {
+        state.speed = 0;
+        state.speedTarget = 0;
+        state.lastNow = 0;
+        applyRing();
+      }
+    }
+
+    function showPointer() {
+      if (!state.active || !state.inside) return;
+      if (!state.shown) {
+        state.x = state.targetX;
+        state.y = state.targetY;
+        state.lastNow = 0;
+        applyPointer();
+        applyRing();
+      }
+      state.shown = true;
+      quadrantPointer.classList.add('is-visible');
+      schedule();
+    }
+
+    function updateHover() {
+      if (!state.active || !state.inside) {
+        setHover(null);
+        state.inCenter = false;
+        return;
+      }
+
+      const rect = quadrantStage.getBoundingClientRect();
+      if (rect.width < 1 || rect.height < 1) return;
+      const localX = state.clientX - rect.left;
+      const localY = state.clientY - rect.top;
+      const centerRect = center?.getBoundingClientRect();
+      const inCenter = !!centerRect &&
+        state.clientX >= centerRect.left &&
+        state.clientX <= centerRect.right &&
+        state.clientY >= centerRect.top &&
+        state.clientY <= centerRect.bottom;
+
+      state.inCenter = inCenter;
+      if (inCenter) {
+        setHover(null);
+        return;
+      }
+
+      const column = localX < rect.width * 0.5 ? 0 : 1;
+      const row = localY < rect.height * 0.5 ? 0 : 1;
+      setHover(['time', 'theme', 'limit', 'score'][row * 2 + column]);
+    }
+
+    function onPointerMove(event) {
+      if (event.pointerType === 'touch') {
+        state.inside = false;
+        state.pointerType = 'touch';
+        hidePointer();
+        return;
+      }
+
+      state.pointerType = event.pointerType || 'mouse';
+      const target = event.target;
+      const overChrome = target instanceof Element &&
+        !!target.closest('.tuner, .deck-controls');
+      const rect = quadrantStage.getBoundingClientRect();
+      const inside = !overChrome &&
+        rect.width > 0 &&
+        rect.height > 0 &&
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom;
+
+      state.clientX = event.clientX;
+      state.clientY = event.clientY;
+      state.inside = inside;
+
+      if (!inside) {
+        hidePointer();
+        return;
+      }
+
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+      const eventTime = Number.isFinite(event.timeStamp) && event.timeStamp > 0
+        ? event.timeStamp
+        : performance.now();
+      const moveDt = state.lastMoveAt > 0
+        ? Math.max(0.001, Math.min(0.12, (eventTime - state.lastMoveAt) / 1000))
+        : 0;
+      const distance = state.lastMoveAt > 0
+        ? Math.hypot(localX - state.lastPointerX, localY - state.lastPointerY)
+        : 0;
+
+      state.targetX = localX;
+      state.targetY = localY;
+      state.x = localX;
+      state.y = localY;
+      state.clientX = event.clientX;
+      state.clientY = event.clientY;
+      state.lastPointerX = localX;
+      state.lastPointerY = localY;
+      state.lastMoveAt = eventTime;
+
+      if (!state.active) return;
+      if (state.reducedMotion) {
+        resetRing();
+        applyPointer();
+        state.shown = true;
+        quadrantPointer.classList.add('is-visible');
+        return;
+      }
+
+      if (moveDt > 0 && distance > 0) {
+        const instantaneous = Math.min(3000, distance / moveDt);
+        state.speedTarget = Math.max(state.speedTarget, instantaneous);
+      }
+
+      applyPointer();
+      updateHover();
+      showPointer();
+    }
+
+    function leave() {
+      state.inside = false;
+      hidePointer();
+    }
+
+    function sync() {
+      const active = slideIndex === QUADRANT_SLIDE;
+      state.active = active;
+      art.classList.toggle('is-quadrant-page', active);
+      if (!active) {
+        hidePointer();
+        return;
+      }
+      updateHover();
+      if (state.inside) {
+        state.x = state.targetX;
+        state.y = state.targetY;
+        resetRing();
+        applyPointer();
+        state.shown = true;
+        quadrantPointer.classList.add('is-visible');
+      }
+    }
+
+    function deactivate() {
+      state.active = false;
+      hidePointer();
+      art.classList.remove('is-quadrant-page');
+    }
+
+    function onVisibility() {
+      if (document.hidden) {
+        if (state.raf) cancelAnimationFrame(state.raf);
+        state.raf = 0;
+        return;
+      }
+      if (state.active && state.inside) schedule();
+    }
+
+    function onReducedMotion(event) {
+      state.reducedMotion = event.matches;
+      if (state.reducedMotion) {
+        if (state.raf) cancelAnimationFrame(state.raf);
+        state.raf = 0;
+        state.x = state.targetX;
+        state.y = state.targetY;
+        resetRing();
+        applyPointer();
+        return;
+      }
+      schedule();
+    }
+
+    window.addEventListener('pointermove', onPointerMove, {
+      passive: true,
+      signal
+    });
+    document.documentElement.addEventListener('pointerleave', leave, {
+      passive: true,
+      signal
+    });
+    window.addEventListener('blur', leave, { passive: true, signal });
+    document.addEventListener('visibilitychange', onVisibility, { signal });
+    media?.addEventListener('change', onReducedMotion, { signal });
+
+    updateHover();
+
+    const api = {
+      get element() { return quadrantStage; },
+      get units() { return [...units]; },
+      getState: () => ({
+        active: state.active,
+        inside: state.inside,
+        shown: state.shown,
+        hover: state.hover,
+        inCenter: state.inCenter,
+        pointerType: state.pointerType,
+        frames: state.frames,
+        speed: Number(state.speed.toFixed(2)),
+        ring: {
+          size: Number(state.ringSize.toFixed(2)),
+          stroke: Number(state.ringStroke.toFixed(2))
+        },
+        target: { x: state.targetX, y: state.targetY },
+        current: { x: state.x, y: state.y }
+      }),
+      sync,
+      deactivate,
+      hide: hidePointer,
+      destroy() {
+        if (state.raf) cancelAnimationFrame(state.raf);
+        state.raf = 0;
+        controller.abort();
+        parallax?.destroy();
+        parallax = null;
+        quadrantPointer.classList.remove('is-visible');
+        art.classList.remove('is-quadrant-page');
+      }
+    };
+
+    return api;
+  }
+
+  quadrantPage = initQuadrantPage();
+  quadrantPage?.sync();
+
+  function applySurface() {
+    const center = tuning.center;
+    if (field) {
+      field.setPalette({
+        center,
+        particle: tuning.particle
+      });
+    }
+    // The solid surface and the mirror root share the centre colour.
+    art.style.background = center;
+    if (mirror?.root) mirror.root.style.background = center;
+  }
+
+  function applyCoverLayout() {
+    document.documentElement.style.setProperty('--cover-bar-height', `${tuning.coverBar}px`);
+    document.documentElement.style.setProperty('--cover-bottom-gap', `${tuning.coverGap}px`);
+    document.documentElement.style.setProperty('--cover-text-y', `${tuning.coverTextY}px`);
+    document.documentElement.style.setProperty('--cover-art-y', `${tuning.coverArtY}px`);
+    tuneCoverBarValue.textContent = `${tuning.coverBar}px`;
+    tuneCoverGapValue.textContent = `${tuning.coverGap}px`;
+    tuneCoverTextYValue.textContent = `${tuning.coverTextY}px`;
+    tuneCoverArtYValue.textContent = `${tuning.coverArtY}px`;
+  }
+
+  let coverRefreshFrame = 0;
+
+  function refreshCoverMirror() {
+    if (!mirror || coverRefreshFrame) return;
+    coverRefreshFrame = requestAnimationFrame(() => {
+      coverRefreshFrame = 0;
+      mirror?.refresh();
+    });
+  }
+
+  function syncTuningInputs() {
+    tuneParticle.value = tuning.particle;
+    tuneCenter.value = tuning.center;
+    tuneCoverBar.value = String(tuning.coverBar);
+    tuneCoverGap.value = String(tuning.coverGap);
+    tuneCoverTextY.value = String(tuning.coverTextY);
+    tuneCoverArtY.value = String(tuning.coverArtY);
+    tuneFeatherFixed.textContent = String(FIXED.feather);
+  }
+
+  function updateTuneReadout() {
+    if (!mirror) {
+      tuneMode.textContent = '—';
+      tuneReadout.textContent = 'waiting for backend…';
+      return;
+    }
+    const state = mirror.getState();
+    const layout = state.layout;
+    const device = layout?.device;
+    const detail = state.renderDetail;
+    tuneMode.textContent = state.mode.toUpperCase();
+    const lines = [
+      `dpr ${state.dpr.toFixed(2)} · ${state.mode.toUpperCase()}`,
+      layout
+        ? `content ${layout.aw.toFixed(2)} × ${layout.ah.toFixed(2)} css`
+        : 'content —',
+      device
+        ? `device ${device.aw} × ${device.ah} px`
+        : 'device —'
+    ];
+    if (detail) {
+      lines.push(`canvas ${detail.outputWidth} × ${detail.outputHeight}`);
+      lines.push(`mirror ${detail.width} × ${detail.height}`);
+    } else if (state.map) {
+      lines.push(`map ${state.map.mirror || '—'}`);
+    }
+    tuneReadout.textContent = lines.join('\n');
+  }
+
+  function applyFixedBackendOptions() {
+    if (!mirror) return;
+    if (mirror.mode === 'svg') {
+      mirror.setSvgOptions({
+        mapScale: FIXED.mapScale,
+        maxMR: FIXED.maxMR
+      });
+    } else {
+      mirror.setWebglOptions({
+        renderScale: FIXED.renderScale,
+        contentScale: FIXED.contentScale
+      });
+    }
+  }
+
+  function applyMirrorTuning() {
+    if (!mirror) return;
+    try {
+      mirror.setFilter({ blur: FIXED.blur, feather: FIXED.feather });
+      applyFixedBackendOptions();
+    } catch (error) {
+      setTuneStatus(error.message);
+    }
+    syncTuningInputs();
+    updateTuneReadout();
+  }
+
+  function configSnapshot() {
+    return JSON.stringify({
+      ...FIXED,
+      ...tuning,
+      particles: {
+        sizePx: [PARTICLE_DEFAULTS.minSizePx, PARTICLE_DEFAULTS.maxSizePx],
+        speedPxPerSec: [
+          PARTICLE_DEFAULTS.minSpeedPxPerSec,
+          PARTICLE_DEFAULTS.maxSpeedPxPerSec
+        ],
+        densityAreaPx: PARTICLE_DEFAULTS.densityAreaPx,
+        count: field?.getState().count ?? null,
+        dprCap: PARTICLE_DEFAULTS.dprCap
+      },
+      deck: {
+        count: slides.length,
+        index: slideIndex,
+        fadeDuration: DECK_FADE_DURATION,
+        fadeMode: 'staggered',
+        fadeItems: slides.reduce(
+          (total, slide) => total + slide.querySelectorAll('[data-fade]').length,
+          0
+        )
+      },
+      cover: {
+        barHeight: tuning.coverBar,
+        bottomGap: tuning.coverGap,
+        textY: tuning.coverTextY,
+        imageY: tuning.coverArtY
+      },
+      parallax: parallax
+        ? (() => {
+          const state = parallax.getState();
+          return {
+            maxShiftPx: state.maxShiftPx,
+            smoothing: state.smoothing,
+            layers: state.layers.map((layer) => ({
+              depth: layer.depth,
+              shiftPx: layer.shiftPx
+            }))
+          };
+        })()
+        : null,
+      quadrants: {
+        index: QUADRANT_SLIDE,
+        hover: quadrantPage?.getState().hover ?? null,
+        tintPanels: ['red', 'green', 'blue', 'gray'],
+        tintColors: Object.fromEntries(
+          [...document.querySelectorAll('.quadrant-filter-defs feFlood')].map(
+            (flood) => [
+              flood.parentElement.id.replace('quad-tint-', ''),
+              flood.getAttribute('flood-color')
+            ]
+          )
+        ),
+        pointer: {
+          nativeCursor: true,
+          sizePx: [QUADRANT_RING_MIN_SIZE, QUADRANT_RING_MAX_SIZE],
+          strokePx: [QUADRANT_RING_MAX_STROKE, QUADRANT_RING_MIN_STROKE],
+          speedCapPxPerSec: QUADRANT_RING_SPEED_CAP,
+          speedSmoothing: QUADRANT_RING_SPEED_SMOOTHING,
+          speedDecay: QUADRANT_RING_SPEED_DECAY
+        }
+      },
+      contentSize: { width: '72%', height: '72%' }
+    }, null, 2);
+  }
+
+  tuneParticle.addEventListener('input', () => {
+    tuning.particle = tuneParticle.value;
+    applySurface();
+    saveTuning();
+  });
+
+  tuneCenter.addEventListener('input', () => {
+    tuning.center = tuneCenter.value;
+    applySurface();
+    saveTuning();
+  });
+
+  tuneCoverBar.addEventListener('input', () => {
+    tuning.coverBar = Number(tuneCoverBar.value);
+    applyCoverLayout();
+    refreshCoverMirror();
+    saveTuning();
+  });
+
+  tuneCoverGap.addEventListener('input', () => {
+    tuning.coverGap = Number(tuneCoverGap.value);
+    applyCoverLayout();
+    refreshCoverMirror();
+    saveTuning();
+  });
+
+  tuneCoverTextY.addEventListener('input', () => {
+    tuning.coverTextY = Number(tuneCoverTextY.value);
+    applyCoverLayout();
+    refreshCoverMirror();
+    saveTuning();
+  });
+
+  tuneCoverArtY.addEventListener('input', () => {
+    tuning.coverArtY = Number(tuneCoverArtY.value);
+    applyCoverLayout();
+    refreshCoverMirror();
+    saveTuning();
+  });
+
+  tuneToggle.addEventListener('click', () => {
+    const open = tuneBody.hidden;
+    tuneBody.hidden = !open;
+    tuner.classList.toggle('is-collapsed', !open);
+    tuneToggle.textContent = open ? '–' : '+';
+    tuneToggle.setAttribute('aria-expanded', String(open));
+  });
+
+  tuneReset.addEventListener('click', () => {
+    tuning = { ...TUNE_DEFAULTS };
+    syncTuningInputs();
+    applyCoverLayout();
+    applySurface();
+    applyMirrorTuning();
+    refreshCoverMirror();
+    saveTuning();
+    setTuneStatus('Defaults restored');
+  });
+
+  tuneCopy.addEventListener('click', async () => {
+    const text = configSnapshot();
+    try {
+      await navigator.clipboard.writeText(text);
+      setTuneStatus('Config copied');
+    } catch {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.append(area);
+      area.select();
+      try { document.execCommand('copy'); setTuneStatus('Config copied'); }
+      catch { setTuneStatus('Copy failed'); }
+      area.remove();
+    }
+  });
+
+  let mirror = null;
+  let field = null;
+  let preflight = null;
+  let questionResolve = null;
+  let questionCancelValue = 'close';
+  let questionFocusTimer = 0;
+
+  syncTuningInputs();
+  applyCoverLayout();
+  applySurface();
+  updateTuneReadout();
+
+  tuneBody.hidden = true;
+  tuner.classList.add('is-collapsed');
+  tuneToggle.textContent = '+';
+  tuneToggle.setAttribute('aria-expanded', 'false');
+
+  window.__mirrorHome = {
+    get mirror() { return mirror; },
+    get field() { return field; },
+    get parallax() { return parallax; },
+    get quadrant() { return quadrantPage; },
+    deck: deckApi,
+    get preflight() { return preflight; },
+    get ready() { return mirror !== null; },
+    getState: () => mirror?.getState() ?? null
+  };
+
+  const nextFrame = () => new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const PREFLIGHT_FADE_MS = 250;
+  const BOOT_HIDE_MS = 270;
+
+  function formatBytes(value) {
+    if (!Number.isFinite(value) || value < 0) return '—';
+    if (value < 1024) return `${Math.round(value)} B`;
+    if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+    return `${(value / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  function setBootStatus(status, detail) {
+    bootStatus.textContent = status;
+    if (detail !== undefined) bootDetail.textContent = detail;
+  }
+
+  function setBootProgress(ratio, status, detail, { indeterminate = false } = {}) {
+    boot.classList.remove('is-error');
+    const known = Number.isFinite(ratio);
+    bootBar.classList.toggle('indeterminate', !known && indeterminate);
+
+    if (known) {
+      const value = Math.max(0, Math.min(1, ratio));
+      const percent = Math.round(value * 100);
+      bootBar.style.transform = `scaleX(${value})`;
+      bootPercent.textContent = `${percent}%`;
+      bootTrack.setAttribute('aria-valuenow', String(percent));
+    } else if (!indeterminate) {
+      bootBar.style.transform = 'scaleX(0)';
+      bootPercent.textContent = '…';
+      bootTrack.removeAttribute('aria-valuenow');
+    } else {
+      bootPercent.textContent = '…';
+      bootTrack.removeAttribute('aria-valuenow');
+    }
+
+    setBootStatus(status, detail);
+  }
+
+  function setBootError(error) {
+    boot.classList.add('is-error');
+    bootBar.classList.remove('indeterminate');
+    bootBar.style.transform = 'scaleX(1)';
+    bootPercent.textContent = 'ERR';
+    bootTrack.removeAttribute('aria-valuenow');
+    bootStatus.textContent = 'INITIALIZATION FAILED';
+    bootDetail.textContent = error?.message || 'Unknown error';
+  }
+
+  function onThreeProgress(event) {
+    if (event.phase === 'start') {
+      setBootProgress(0, 'LOADING THREE', event.cached
+        ? 'Using cached three.bundle.js'
+        : 'Downloading three.bundle.js…');
+      return;
+    }
+
+    if (event.phase === 'progress') {
+      const known = Number.isFinite(event.ratio);
+      const detail = event.total
+        ? `${formatBytes(event.loaded)} / ${formatBytes(event.total)}`
+        : `${formatBytes(event.loaded)} downloaded`;
+      setBootProgress(
+        known ? event.ratio : null,
+        'LOADING THREE',
+        detail,
+        { indeterminate: !known }
+      );
+      return;
+    }
+
+    if (event.phase === 'done') {
+      setBootProgress(1, 'THREE READY', 'Checking HTML-in-canvas support…');
+      return;
+    }
+
+    if (event.phase === 'error') {
+      setBootError(event.error);
+    }
+  }
+
+  async function closeQuestion(value) {
+    if (!questionResolve) return;
+    const resolve = questionResolve;
+    questionResolve = null;
+    clearTimeout(questionFocusTimer);
+    boot.classList.remove('is-question');
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    await wait(reduce ? 0 : PREFLIGHT_FADE_MS);
+    bootQuestion.hidden = true;
+    stage.inert = false;
+    tuner.inert = false;
+    resolve(value);
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !questionResolve) return;
+    event.preventDefault();
+    closeQuestion(questionCancelValue);
+  });
+
+  function askQuestion({ title, body, note = '', actions, cancelValue = 'close' }) {
+    questionTitle.textContent = title;
+    questionBody.textContent = body;
+    questionNote.hidden = !note;
+    questionNote.textContent = note;
+    questionActions.replaceChildren();
+
+    actions.forEach((action, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `question-button ${action.kind || (index === 0 ? 'primary' : 'secondary')}`;
+      button.textContent = action.label;
+      button.addEventListener('click', () => closeQuestion(action.value));
+      questionActions.append(button);
+    });
+
+    questionCancelValue = cancelValue;
+    bootQuestion.hidden = false;
+    stage.inert = true;
+    tuner.inert = true;
+
+    return new Promise((resolve) => {
+      questionResolve = resolve;
+      void bootQuestion.offsetWidth;
+      boot.classList.add('is-question');
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      clearTimeout(questionFocusTimer);
+      questionFocusTimer = setTimeout(() => {
+        if (!questionResolve) return;
+        questionActions.querySelector('.primary')?.focus();
+      }, reduce ? 0 : PREFLIGHT_FADE_MS);
+    });
+  }
+
+  bootQuestion.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab') return;
+    const buttons = [...questionActions.querySelectorAll('button')];
+    if (!buttons.length) return;
+    const first = buttons[0];
+    const last = buttons[buttons.length - 1];
+
+    if (buttons.length === 1) {
+      event.preventDefault();
+      first.focus();
+      return;
+    }
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+
+  function compatibilityActions() {
+    return [
+      { label: '继续使用 WEBGL', value: 'webgl', kind: 'primary' },
+      { label: '回退到 SVG', value: 'svg', kind: 'secondary' }
+    ];
+  }
+
+  function compatibilityCopy(result) {
+    const version = result.browser.version || '未知版本';
+    const minimum = result.version.minimum;
+
+    if (result.compatible === false) {
+      return {
+        title: 'Chrome 版本不兼容',
+        body:
+          `检测到 Chrome ${version}，低于 WebGL 后端建议的 ${minimum}。\n` +
+          '继续使用 WebGL 可能出现镜像偏移、缩放或画面异常。\n\n' +
+          '你可以继续使用 WebGL，或回退到 SVG 后端。',
+        note: `Chrome ${minimum} 及以上版本修复了嵌套 canvas 的 device-pixel 问题。`,
+        actions: compatibilityActions(),
+        cancelValue: 'svg'
+      };
+    }
+
+    return {
+      title: '无法确认 WebGL 兼容性',
+      body:
+        '无法检测到 Chrome 版本，因此不能确认 HTML-in-Canvas 的版本兼容性。\n\n' +
+        '你可以继续使用 WebGL，或回退到 SVG 后端。',
+      note: `建议使用 Chrome ${minimum} 或更新版本。`,
+      actions: compatibilityActions(),
+      cancelValue: 'svg'
+    };
+  }
+
+  function unsupportedCopy(result) {
+    return {
+      title: '当前使用 SVG 后端',
+      body:
+        '当前浏览器没有启用 HTML-in-Canvas 支持，页面已自动回退到 SVG 后端。\n\n' +
+        '若希望获得更好的画质和性能，请使用兼容的 Chrome 浏览器，' +
+        '并启用 chrome://flags/#canvas-draw-element 实验特性。',
+      note: result.errors[0]?.message || result.summary,
+      actions: [{ label: '使用 SVG 继续', value: 'close', kind: 'primary' }],
+      cancelValue: 'close'
+    };
+  }
+
+  function loadErrorCopy(error) {
+    return {
+      title: 'THREE 加载失败',
+      body:
+        'three.bundle.js 加载失败，页面已回退到 SVG 后端。\n\n' +
+        (error?.message || '未知错误'),
+      actions: [{ label: '使用 SVG 继续', value: 'close', kind: 'primary' }],
+      cancelValue: 'close'
+    };
+  }
+
+  function webglErrorCopy(error) {
+    return {
+      title: 'WebGL 启动失败',
+      body:
+        'WebGL 后端启动失败，已回退到 SVG 后端。\n\n' +
+        (error?.message || '未知错误'),
+      actions: [{ label: '使用 SVG 继续', value: 'close', kind: 'primary' }],
+      cancelValue: 'close'
+    };
+  }
+
+  async function mountMirror(mode, three = null) {
+    if (mirror) {
+      mirror.destroy();
+      mirror = null;
+    }
+
+    setBootStatus(
+      mode === 'webgl' ? 'STARTING WEBGL' : 'STARTING SVG',
+      mode === 'webgl'
+        ? 'Creating the HTML-in-Canvas backend…'
+        : 'Creating the SVG displacement backend…'
+    );
+
+    const options = {
+      container: stage,
+      content: art,
+      mode,
+      contentSize: { width: '72%', height: '72%' },
+      contentFit: 'fill',
+      // The solid content surface owns the centre fill.
+      background: tuning.center,
+      filter: { blur: FIXED.blur, feather: FIXED.feather },
+      svg: {
+        mapScale: FIXED.mapScale,
+        maxMR: FIXED.maxMR
+      },
+      resize: { interval: 120 }
+    };
+
+    if (mode === 'webgl') {
+      if (!three) throw new Error('three.js bundle is not available');
+      options.webgl = {
+        three,
+        dprCap: 2,
+        renderScale: FIXED.renderScale,
+        contentScale: FIXED.contentScale,
+        fallbackToSvg: false
+      };
+    }
+
+    const instance = await createMirror(options);
+    if (instance.mode !== mode) {
+      instance.destroy();
+      throw new Error(`requested ${mode}, got ${instance.mode}`);
+    }
+
+    mirror = instance;
+    instance.on('resize', updateTuneReadout);
+    instance.on('filter', updateTuneReadout);
+    instance.on('render', updateTuneReadout);
+
+    if (!field) {
+      try {
+        field = createContentField(contentCanvas);
+      } catch (error) {
+        console.error(error);
+        field = null;
+      }
+      art.classList.toggle('is-field-fallback', !field);
+    }
+
+    applySurface();
+
+    document.body.dataset.backend = mirror.mode;
+    document.body.classList.add('mirror-ready');
+    updateTuneReadout();
+    return instance;
+  }
+
+  async function hideBoot() {
+    if (field) {
+      try {
+        await field.ready();
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    document.body.setAttribute('aria-busy', 'false');
+    boot.classList.remove('is-question');
+    boot.classList.add('is-hidden');
+    stage.inert = false;
+    tuner.inert = false;
+    deckControls.inert = false;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    await wait(reduce ? 0 : BOOT_HIDE_MS);
+    bootQuestion.hidden = true;
+    boot.hidden = true;
+  }
+
+  async function fallbackToSvgAfterError(error, copy) {
+    setBootProgress(null, 'STARTING SVG', 'Creating the SVG displacement backend…');
+    try {
+      await mountMirror('svg');
+    } catch (fallbackError) {
+      console.error(fallbackError);
+      setBootError(fallbackError);
+      return;
+    }
+    setBootProgress(1, 'SVG READY', 'Review the fallback note');
+    await askQuestion(copy(error));
+    await hideBoot();
+  }
+
+  async function init() {
+    document.body.setAttribute('aria-busy', 'true');
+
+    let three;
+    try {
+      three = await loadThreeBundle({ onProgress: onThreeProgress });
+    } catch (error) {
+      console.error(error);
+      setBootError(error);
+      await fallbackToSvgAfterError(error, loadErrorCopy);
+      return;
+    }
+
+    setBootProgress(1, 'THREE READY', 'Checking HTML-in-canvas support…');
+    await nextFrame();
+
+    let result;
+    try {
+      result = checkHtmlInCanvasSupport();
+    } catch (error) {
+      console.error(error);
+      await fallbackToSvgAfterError(error, (preflightError) => ({
+        title: '兼容性检查失败',
+        body:
+          'HTML-in-Canvas 预检失败，页面已回退到 SVG 后端。\n\n' +
+          (preflightError?.message || '未知错误'),
+        actions: [{ label: '使用 SVG 继续', value: 'close', kind: 'primary' }],
+        cancelValue: 'close'
+      }));
+      return;
+    }
+
+    preflight = result;
+
+    if (!result.supported) {
+      setBootProgress(1, 'PREFLIGHT', 'HTML-in-Canvas is unavailable; preparing SVG');
+      try {
+        await mountMirror('svg');
+      } catch (error) {
+        console.error(error);
+        setBootError(error);
+        return;
+      }
+      setBootProgress(1, 'SVG READY', 'Review the fallback note');
+      await askQuestion(unsupportedCopy(result));
+      await hideBoot();
+      return;
+    }
+
+    if (result.compatible !== true) {
+      setBootProgress(1, 'PREFLIGHT', 'Waiting for compatibility choice');
+      const choice = await askQuestion(compatibilityCopy(result));
+
+      if (choice === 'webgl') {
+        try {
+          await mountMirror('webgl', three);
+        } catch (error) {
+          console.error(error);
+          await fallbackToSvgAfterError(error, webglErrorCopy);
+          return;
+        }
+      } else {
+        try {
+          await mountMirror('svg');
+        } catch (error) {
+          console.error(error);
+          setBootError(error);
+          return;
+        }
+      }
+
+      await hideBoot();
+      return;
+    }
+
+    try {
+      await mountMirror('webgl', three);
+      await hideBoot();
+    } catch (error) {
+      console.error(error);
+      await fallbackToSvgAfterError(error, webglErrorCopy);
+    }
+  }
+
+  init().catch((error) => {
+    console.error(error);
+    setBootError(error);
+  });
+</script>
+</body>
+</html>

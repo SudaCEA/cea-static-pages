@@ -1,7 +1,7 @@
 /**
  * mirror.js — one API for two mirror backends.
  *
- *   import { createMirror } from './js/mirror.js';
+ *   import { createMirror } from './js/effects/mirror.js';
  *
  *   const mirror = await createMirror({
  *     container: document.querySelector('#stage'),
@@ -36,7 +36,8 @@
  * targets at their own scales, then composited with linear filtering onto the
  * DPR canvas. The canvas and DOM hit-testing geometry stay at full output
  * resolution, and `contentScale: 1` keeps the body at native resolution while
- * only the mirror content is reduced.
+ * only the mirror content is reduced. A two-device-pixel, full-resolution
+ * skirt repeats the body texture's edge over the low-resolution seam.
  *
  * `webgl.onProgress(event)` reports three-loader lifecycle. Native `import()`
  * exposes start/done only; `webgl.threeLoader({ url, onProgress })` can add
@@ -63,6 +64,10 @@ const DEFAULT_WEBGL = Object.freeze({
   fallbackToSvg: true,
   threeUrl: null
 });
+
+// A full-resolution ring outside the content rectangle. It repeats the
+// content texture's edge pixels over the low-resolution composite seam.
+const EDGE_SKIRT_DEVICE_PX = 2;
 
 const DEFAULT_RESIZE = Object.freeze({
   interval: 100
@@ -167,13 +172,65 @@ function sameFilter(a, b) {
 }
 
 function sameLayout(a, b, epsilon = 0.01) {
-  return !!a && !!b &&
+  if (!a || !b) return false;
+  const sameCss =
     Math.abs(a.width - b.width) < epsilon &&
     Math.abs(a.height - b.height) < epsilon &&
     Math.abs(a.ax - b.ax) < epsilon &&
     Math.abs(a.ay - b.ay) < epsilon &&
     Math.abs(a.aw - b.aw) < epsilon &&
     Math.abs(a.ah - b.ah) < epsilon;
+  if (!sameCss || !a.device || !b.device) return sameCss;
+  return a.dpr === b.dpr &&
+    a.device.width === b.device.width &&
+    a.device.height === b.device.height &&
+    a.device.ax === b.device.ax &&
+    a.device.ay === b.device.ay &&
+    a.device.aw === b.device.aw &&
+    a.device.ah === b.device.ah;
+}
+
+/**
+ * Quantize one CSS-pixel dimension to whole device pixels. The result is
+ * floored (never wider than the requested box) and adjusted to share parity
+ * with the surface so centering produces integer left/top coordinates.
+ */
+function snapDeviceDimension(cssValue, totalDevice, dpr) {
+  const total = Math.max(1, Math.round(totalDevice));
+  const target = Math.max(0, cssValue) * dpr;
+  let device = Math.floor(target + 1e-6);
+  if (cssValue > 0) device = Math.max(1, device);
+  if (Math.abs(device - total) % 2 !== 0) {
+    device = Math.max(0, device - 1);
+  }
+  return device;
+}
+
+function makeLayout(W, H, aw, ah, dpr) {
+  const totalWidth = Math.max(1, Math.round(W * dpr));
+  const totalHeight = Math.max(1, Math.round(H * dpr));
+  const awDev = snapDeviceDimension(aw, totalWidth, dpr);
+  const ahDev = snapDeviceDimension(ah, totalHeight, dpr);
+  const axDev = Math.round((totalWidth - awDev) / 2);
+  const ayDev = Math.round((totalHeight - ahDev) / 2);
+
+  return {
+    width: W,
+    height: H,
+    ax: axDev / dpr,
+    ay: ayDev / dpr,
+    aw: awDev / dpr,
+    ah: ahDev / dpr,
+    dpr,
+    device: {
+      width: totalWidth,
+      height: totalHeight,
+      ax: axDev,
+      ay: ayDev,
+      aw: awDev,
+      ah: ahDev
+    }
+  };
 }
 
 function validateSizeSpec(value, name) {
@@ -635,9 +692,18 @@ class SvgBackend {
   }
 
   layout(layout, filter, { dpr }) {
-    this._layout = { ...layout };
     this._filter = filter;
     this._dpr = dpr;
+    // The SVG filter is rasterized in CSS units; use the device surface in
+    // CSS units so its texels line up with the integer device-pixel layout.
+    const surface = layout.device
+      ? {
+        ...layout,
+        width: layout.device.width / dpr,
+        height: layout.device.height / dpr
+      }
+      : layout;
+    this._layout = surface;
 
     const frame = this.mirror.contentFrame;
     frame.style.left = `${layout.ax}px`;
@@ -647,17 +713,18 @@ class SvgBackend {
     frame.style.zoom = '';
     frame.style.transform = '';
     frame.style.transformOrigin = '';
+    this._clipAroundContent(layout);
 
-    this._updateFilterRegion(layout);
-    this._mirrorScale = this._mapScale(layout, dpr);
-    this._mirrorMap = makeMirrorMap(layout, this._mirrorScale);
+    this._updateFilterRegion(surface);
+    this._mirrorScale = this._mapScale(surface, dpr);
+    this._mirrorMap = makeMirrorMap(surface, this._mirrorScale);
     this._mirrorSize = {
       width: this._mirrorMap.width,
       height: this._mirrorMap.height
     };
     this._setImage(this.feMirror, this._mirrorMap.url);
-    this._updateMask(layout, filter, dpr);
-    this._updateAttrs(layout, filter);
+    this._updateMask(surface, filter, dpr);
+    this._updateAttrs(surface, filter);
 
     this._mapInfo = {
       mirror: `${this._mirrorMap.width}×${this._mirrorMap.height}`,
@@ -674,6 +741,26 @@ class SvgBackend {
 
     if (maskChanged) this._updateMask(this._layout, next, this._dpr);
     this._updateAttrs(this._layout, next);
+  }
+
+  _clipAroundContent(layout) {
+    const W = Math.max(0, layout.width);
+    const H = Math.max(0, layout.height);
+    const x = Math.max(0, Math.min(W, layout.ax));
+    const y = Math.max(0, Math.min(H, layout.ay));
+    const right = Math.max(x, Math.min(W, layout.ax + layout.aw));
+    const bottom = Math.max(y, Math.min(H, layout.ay + layout.ah));
+
+    // The glass's filtered backdrop is painted over the content frame as well.
+    // At the frame edge that warped copy can bleed a few pixels over the live
+    // DOM (for example hiding a bottom rule). Clip the glass to the four side
+    // bands and leave the content rectangle to the DOM underneath.
+    if (right <= x || bottom <= y) {
+      this.glass.style.clipPath = '';
+      return;
+    }
+
+    this.glass.style.clipPath = `path("M0 0 H${W} V${H} H0 Z M${x} ${y} V${bottom} H${right} V${y} Z")`;
   }
 
   _updateFilterRegion(layout) {
@@ -987,6 +1074,9 @@ class WebGLBackend {
     this.bodyMaterial = null;
     this.bodyOverlayMesh = null;
     this.bodyOverlayMaterial = null;
+    this.skirtGeometry = null;
+    this.skirtMesh = null;
+    this.skirtMaterial = null;
     this._layout = null;
     this._filter = mirror._filter;
     this._dpr = mirror._dpr;
@@ -1188,6 +1278,32 @@ class WebGLBackend {
       this.bodyOverlayMesh.visible = false;
       this.upscaleScene.add(this.bodyOverlayMesh);
 
+      // Full-resolution skirt around the content. Each side repeats the
+      // corresponding body-texture edge over the low-res upscale seam.
+      this.skirtMaterial = new THREE.ShaderMaterial({
+        uniforms: { uBody: { value: bodyTarget.texture } },
+        vertexShader: VERTEX_SHADER,
+        fragmentShader: BODY_OVERLAY_FRAGMENT_SHADER,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true,
+        side: THREE.DoubleSide
+      });
+      this.skirtGeometry = new THREE.BufferGeometry();
+      this.skirtGeometry.setAttribute(
+        'position',
+        new THREE.BufferAttribute(new Float32Array(4 * 6 * 3), 3)
+      );
+      this.skirtGeometry.setAttribute(
+        'uv',
+        new THREE.BufferAttribute(new Float32Array(4 * 6 * 2), 2)
+      );
+      this.skirtMesh = new THREE.Mesh(this.skirtGeometry, this.skirtMaterial);
+      this.skirtMesh.frustumCulled = false;
+      this.skirtMesh.renderOrder = 2;
+      this.skirtMesh.visible = false;
+      this.upscaleScene.add(this.skirtMesh);
+
       renderer.setAnimationLoop(() => {
         if (!this._paintReady) return;
         try {
@@ -1235,12 +1351,12 @@ class WebGLBackend {
     frame.style.transformOrigin = '0 0';
     frame.style.transform = `translate(${layout.ax}px, ${layout.ay}px)`;
 
-    this.renderer.setPixelRatio(capped);
-    this.renderer.setSize(layout.width, layout.height, false);
-
-    // Use the real backing-store size: three floors fractional DPR products.
-    this._outputWidth = Math.max(1, this.renderer.domElement.width);
-    this._outputHeight = Math.max(1, this.renderer.domElement.height);
+    // Drive the canvas by integer device pixels instead of relying on
+    // three.js to floor a fractional CSS-size * pixel-ratio product.
+    this._outputWidth = Math.max(1, Math.round(layout.width * capped));
+    this._outputHeight = Math.max(1, Math.round(layout.height * capped));
+    this.renderer.setPixelRatio(1);
+    this.renderer.setSize(this._outputWidth, this._outputHeight, false);
     this._resizeTargets();
 
     const u = this.uniforms;
@@ -1308,6 +1424,9 @@ class WebGLBackend {
     if (this.bodyOverlayMesh) {
       this.bodyOverlayMesh.visible = this._composite;
     }
+    if (this.skirtMesh) {
+      this.skirtMesh.visible = this._composite;
+    }
   }
 
   _updateCompositeGeometry(layout) {
@@ -1320,13 +1439,76 @@ class WebGLBackend {
       1 - ((layout.ay + layout.ah / 2) / H) * 2,
       0
     );
+    this._updateSkirtGeometry(layout);
+  }
+
+  _updateSkirtGeometry(layout) {
+    if (!this.skirtGeometry) return;
+    const W = Math.max(1, layout.width);
+    const H = Math.max(1, layout.height);
+    const pad = EDGE_SKIRT_DEVICE_PX / Math.max(1, this._dpr);
+    const x0 = clamp((layout.ax / W) * 2 - 1, -1, 1);
+    const x1 = clamp(((layout.ax + layout.aw) / W) * 2 - 1, -1, 1);
+    const y0 = clamp(1 - ((layout.ay + layout.ah) / H) * 2, -1, 1);
+    const y1 = clamp(1 - (layout.ay / H) * 2, -1, 1);
+    const dx = (pad / W) * 2;
+    const dy = (pad / H) * 2;
+    // Stay one texel inside the captured edge. The outermost body texel can
+    // be partially transparent when the content box lands on a fractional
+    // device pixel; the next texel carries the stable edge colour.
+    const uInset = 1.5 / Math.max(1, this._contentWidth);
+    const vInset = 1.5 / Math.max(1, this._contentHeight);
+    const u0 = Math.min(0.5, uInset);
+    const u1 = Math.max(0.5, 1 - uInset);
+    const v0 = Math.min(0.5, vInset);
+    const v1 = Math.max(0.5, 1 - vInset);
+
+    const position = this.skirtGeometry.getAttribute('position');
+    const uv = this.skirtGeometry.getAttribute('uv');
+    let offset = 0;
+
+    const put = (x, y, u, v) => {
+      position.array[offset * 3] = x;
+      position.array[offset * 3 + 1] = y;
+      position.array[offset * 3 + 2] = 0;
+      uv.array[offset * 2] = u;
+      uv.array[offset * 2 + 1] = v;
+      offset++;
+    };
+
+    const quad = (left, right, bottom, top, uvBottomLeft, uvBottomRight, uvTopRight, uvTopLeft) => {
+      put(left, bottom, uvBottomLeft[0], uvBottomLeft[1]);
+      put(right, bottom, uvBottomRight[0], uvBottomRight[1]);
+      put(right, top, uvTopRight[0], uvTopRight[1]);
+      put(left, bottom, uvBottomLeft[0], uvBottomLeft[1]);
+      put(right, top, uvTopRight[0], uvTopRight[1]);
+      put(left, top, uvTopLeft[0], uvTopLeft[1]);
+    };
+
+    // Top and bottom extend through the corners. Left and right cover the
+    // remaining side strips; the horizontal strips already own the corners.
+    const left = Math.max(-1, x0 - dx);
+    const right = Math.min(1, x1 + dx);
+    quad(left, right, Math.max(-1, y0 - dy), y0, [u0, v0], [u1, v0], [u1, v0], [u0, v0]);
+    quad(left, right, y1, Math.min(1, y1 + dy), [u0, v1], [u1, v1], [u1, v1], [u0, v1]);
+    quad(Math.max(-1, x0 - dx), x0, y0, y1, [u0, v0], [u0, v0], [u0, v1], [u0, v1]);
+    quad(x1, Math.min(1, x1 + dx), y0, y1, [u1, v0], [u1, v0], [u1, v1], [u1, v1]);
+
+    position.needsUpdate = true;
+    uv.needsUpdate = true;
   }
 
   _updateInfo() {
     if (!this._layout) return;
     const dpr = this._dpr;
+    const textureWidth = this._layout.device
+      ? this._layout.device.aw
+      : Math.round(this._layout.aw * dpr);
+    const textureHeight = this._layout.device
+      ? this._layout.device.ah
+      : Math.round(this._layout.ah * dpr);
     this._mapInfo = {
-      texture: `${Math.round(this._layout.aw * dpr)}×${Math.round(this._layout.ah * dpr)}`,
+      texture: `${textureWidth}×${textureHeight}`,
       dpr,
       render: `${this._renderWidth}×${this._renderHeight}`,
       content: `${this._contentWidth}×${this._contentHeight}`,
@@ -1334,7 +1516,8 @@ class WebGLBackend {
       contentScale: this._contentScale,
       mode: this._composite ? 'composite' : 'direct',
       canvas: `${this._outputWidth}×${this._outputHeight}`,
-      upscale: 'linear'
+      upscale: 'linear',
+      skirt: `${EDGE_SKIRT_DEVICE_PX}px`
     };
   }
 
@@ -1355,6 +1538,7 @@ class WebGLBackend {
       contentHeight: this._contentHeight,
       contentPixels: this._contentWidth * this._contentHeight,
       upscale: 'linear',
+      skirtPx: EDGE_SKIRT_DEVICE_PX,
       active: this._composite
     };
   }
@@ -1438,10 +1622,12 @@ class WebGLBackend {
       try { this.upscaleMaterial?.dispose(); } catch { /* noop */ }
       try { this.bodyMaterial?.dispose(); } catch { /* noop */ }
       try { this.bodyOverlayMaterial?.dispose(); } catch { /* noop */ }
+      try { this.skirtMaterial?.dispose(); } catch { /* noop */ }
       try { this.mesh?.geometry?.dispose(); } catch { /* noop */ }
       try { this.upscaleMesh?.geometry?.dispose(); } catch { /* noop */ }
       try { this.bodyMesh?.geometry?.dispose(); } catch { /* noop */ }
       try { this.bodyOverlayMesh?.geometry?.dispose(); } catch { /* noop */ }
+      try { this.skirtGeometry?.dispose(); } catch { /* noop */ }
       try { renderer.dispose(); } catch { /* noop */ }
     }
 
@@ -1470,6 +1656,9 @@ class WebGLBackend {
     this.bodyMaterial = null;
     this.bodyOverlayMesh = null;
     this.bodyOverlayMaterial = null;
+    this.skirtGeometry = null;
+    this.skirtMesh = null;
+    this.skirtMaterial = null;
   }
 }
 
@@ -1520,7 +1709,7 @@ async function loadThree(webglOptions) {
   }
 
   const url = webglOptions.threeUrl ||
-    new URL('./vendor/three.module.js', import.meta.url).href;
+    new URL('../../libs/three/vendor/three.module.js', import.meta.url).href;
 
   if (typeof webglOptions.threeLoader === 'function') {
     emit({ phase: 'start', source: 'custom', url });
@@ -1866,9 +2055,7 @@ class Mirror extends EventTarget {
       return;
     }
 
-    const ax = (W - aw) / 2;
-    const ay = (H - ah) / 2;
-    const next = { width: W, height: H, ax, ay, aw, ah };
+    const next = makeLayout(W, H, aw, ah, this._dpr);
     if (!force && sameLayout(this._layout, next)) {
       this._suspended = false;
       return;
@@ -1987,12 +2174,18 @@ class Mirror extends EventTarget {
     const map = this._backend?.getMapInfo?.() || null;
     const mapDetail = this._backend?.getMapDetail?.() || null;
     const renderDetail = this._backend?.getRenderDetail?.() || null;
+    const layout = this._layout
+      ? {
+        ...this._layout,
+        device: this._layout.device ? { ...this._layout.device } : null
+      }
+      : null;
     return {
       mode: this._mode,
       requestedMode: this._requestedMode,
       fallbackReason: this._fallbackReason,
       dpr: this._dpr,
-      layout: this._layout ? { ...this._layout } : null,
+      layout,
       filter: { ...this._filter },
       contentSize: { ...this._size },
       suspended: this._suspended,

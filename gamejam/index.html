@@ -1,1065 +1,772 @@
 <!doctype html>
-<html lang="zh-CN" class="no-js">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark">
-<meta name="description" content="GAMEJAM 2026 主题「镜」静态展示效果实验：以 SVG filter、程序化 displacement map 与 backdrop-filter 构成的 3×3 镜面场。">
-<title>镜湖 / MIRROR LAKE — GameJam 2026</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070806'/%3E%3Crect x='11.5' y='11.5' width='41' height='41' fill='none' stroke='%23c9bda4' stroke-opacity='.8'/%3E%3Ctext x='32' y='45' text-anchor='middle' font-family='serif' font-size='31' fill='%23e8dfca'%3E%E9%95%9C%3C/text%3E%3C/svg%3E">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#6750A4">
+<meta name="description" content="Ellia Pages — GameJam 2026 静态页面目录。">
+<title>Ellia Pages — GameJam 2026</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%236750A4'/%3E%3Ccircle cx='25' cy='25' r='9' fill='%23EADDFF'/%3E%3Crect x='30' y='31' width='18' height='18' rx='7' fill='%23FFD8E4'/%3E%3C/svg%3E">
+<script>
+  (() => {
+    try {
+      const saved = localStorage.getItem('ellia-theme');
+      if (['purple', 'teal', 'coral', 'blue'].includes(saved)) {
+        document.documentElement.dataset.theme = saved;
+      }
+    } catch {}
+  })();
+</script>
 <style>
-  :root{
-    --ink:#050706;
-    --ink-2:#0a0e0b;
-    --paper:#e8dfca;
-    --paper-2:#c9c0aa;
-    --paper-3:#8c887a;
-    --line:rgba(216,203,175,.18);
-    --line-soft:rgba(216,203,175,.10);
-    --bronze:#b29364;
-    --jade:#93ab9c;
-    --ember:#d1865c;
-    --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,"Songti SC","Noto Serif SC","STSong","SimSun",serif;
-    --cn:"Songti SC","Noto Serif SC","STSong","SimSun","KaiTi",serif;
-    --mono:"SFMono-Regular","JetBrains Mono","Cascadia Mono","Roboto Mono",Consolas,"Liberation Mono",monospace;
-    --sans:"Avenir Next","Helvetica Neue","Segoe UI","Microsoft YaHei",sans-serif;
-    --gutter:clamp(18px,4vw,56px);
-    --art-x:16.1017%;
-    --art-y:16.4179%;
-    --art-w:67.7966%;
-    --art-h:67.1642%;
+  :root,
+  [data-theme="purple"]{
+    --md-primary:#6750A4;
+    --md-on-primary:#FFFFFF;
+    --md-primary-container:#EADDFF;
+    --md-on-primary-container:#21005D;
+    --md-secondary:#625B71;
+    --md-on-secondary:#FFFFFF;
+    --md-secondary-container:#E8DEF8;
+    --md-on-secondary-container:#1D192B;
+    --md-tertiary:#7D5260;
+    --md-tertiary-container:#FFD8E4;
+    --md-on-tertiary-container:#31111D;
+    --md-surface:#FEF7FF;
+    --md-surface-dim:#DED8E1;
+    --md-surface-container-lowest:#FFFFFF;
+    --md-surface-container-low:#F7F2FA;
+    --md-surface-container:#F3EDF7;
+    --md-surface-container-high:#ECE6F0;
+    --md-surface-container-highest:#E6E0E9;
+    --md-on-surface:#1D1B20;
+    --md-on-surface-variant:#49454F;
+    --md-outline:#79747E;
+    --md-outline-variant:#CAC4D0;
+    --md-inverse-surface:#322F35;
+    --md-inverse-on-surface:#F5EFF7;
+    --md-shadow:rgba(0,0,0,.18);
+    --md-hover:rgba(103,80,164,.08);
+    --md-pressed:rgba(103,80,164,.12);
   }
 
-  *,*::before,*::after{box-sizing:border-box}
-  html{background:var(--ink);color-scheme:dark}
+  [data-theme="teal"]{
+    --md-primary:#006A60;
+    --md-on-primary:#FFFFFF;
+    --md-primary-container:#74F8E5;
+    --md-on-primary-container:#00201C;
+    --md-secondary:#4A635F;
+    --md-on-secondary:#FFFFFF;
+    --md-secondary-container:#CCE8E2;
+    --md-on-secondary-container:#05201C;
+    --md-tertiary:#426277;
+    --md-tertiary-container:#C5E7FF;
+    --md-on-tertiary-container:#001E2C;
+    --md-surface:#FAFDFB;
+    --md-surface-dim:#D9E5E1;
+    --md-surface-container-lowest:#FFFFFF;
+    --md-surface-container-low:#F4FBF8;
+    --md-surface-container:#EEF6F3;
+    --md-surface-container-high:#E8F0ED;
+    --md-surface-container-highest:#E2EAE7;
+    --md-on-surface:#191C1B;
+    --md-on-surface-variant:#3F4947;
+    --md-outline:#6F7977;
+    --md-outline-variant:#BEC9C6;
+    --md-inverse-surface:#2D3130;
+    --md-inverse-on-surface:#EFF1F0;
+    --md-shadow:rgba(0,0,0,.18);
+    --md-hover:rgba(0,106,96,.08);
+    --md-pressed:rgba(0,106,96,.12);
+  }
+
+  [data-theme="coral"]{
+    --md-primary:#8F4C38;
+    --md-on-primary:#FFFFFF;
+    --md-primary-container:#FFDBD0;
+    --md-on-primary-container:#3A0B01;
+    --md-secondary:#77574E;
+    --md-on-secondary:#FFFFFF;
+    --md-secondary-container:#FFDBD0;
+    --md-on-secondary-container:#2C1510;
+    --md-tertiary:#6C5D2F;
+    --md-tertiary-container:#F5E1A7;
+    --md-on-tertiary-container:#231B00;
+    --md-surface:#FFF8F5;
+    --md-surface-dim:#E8D6D0;
+    --md-surface-container-lowest:#FFFFFF;
+    --md-surface-container-low:#FFF1EC;
+    --md-surface-container:#FCEAE4;
+    --md-surface-container-high:#F6E4DE;
+    --md-surface-container-highest:#F0DED8;
+    --md-on-surface:#221A18;
+    --md-on-surface-variant:#53433F;
+    --md-outline:#85736E;
+    --md-outline-variant:#D8C2BC;
+    --md-inverse-surface:#392E2B;
+    --md-inverse-on-surface:#FFEDE8;
+    --md-shadow:rgba(0,0,0,.18);
+    --md-hover:rgba(143,76,56,.08);
+    --md-pressed:rgba(143,76,56,.12);
+  }
+
+  [data-theme="blue"]{
+    --md-primary:#0061A4;
+    --md-on-primary:#FFFFFF;
+    --md-primary-container:#D1E4FF;
+    --md-on-primary-container:#001D36;
+    --md-secondary:#535F70;
+    --md-on-secondary:#FFFFFF;
+    --md-secondary-container:#D7E3F7;
+    --md-on-secondary-container:#101C2B;
+    --md-tertiary:#6B5778;
+    --md-tertiary-container:#F2DAFF;
+    --md-on-tertiary-container:#251431;
+    --md-surface:#F8F9FF;
+    --md-surface-dim:#D8DAE0;
+    --md-surface-container-lowest:#FFFFFF;
+    --md-surface-container-low:#F2F3FA;
+    --md-surface-container:#ECEEF4;
+    --md-surface-container-high:#E6E8EE;
+    --md-surface-container-highest:#E1E2E8;
+    --md-on-surface:#1A1C1E;
+    --md-on-surface-variant:#42474E;
+    --md-outline:#72777F;
+    --md-outline-variant:#C2C7CF;
+    --md-inverse-surface:#2F3033;
+    --md-inverse-on-surface:#F1F0F4;
+    --md-shadow:rgba(0,0,0,.18);
+    --md-hover:rgba(0,97,164,.08);
+    --md-pressed:rgba(0,97,164,.12);
+  }
+
+  *{box-sizing:border-box}
+  html{
+    color-scheme:light;
+    scroll-behavior:smooth;
+    background:var(--md-surface);
+  }
   body{
     margin:0;
     min-height:100svh;
-    overflow-x:hidden;
-    color:var(--paper);
-    font-family:var(--sans);
-    background:
-      radial-gradient(115% 85% at 50% 36%, #0f1511 0%, #080b09 42%, #040605 100%);
+    background:var(--md-surface);
+    color:var(--md-on-surface);
+    font-family:"Roboto","Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    transition:background-color .28s ease,color .28s ease;
   }
-  body::before{
-    content:"";
+  a{color:inherit}
+  button{font:inherit}
+  ::selection{background:var(--md-primary-container);color:var(--md-on-primary-container)}
+
+  .skip-link{
     position:fixed;
-    inset:0;
-    pointer-events:none;
-    z-index:0;
-    background:
-      radial-gradient(70% 55% at 50% 46%, transparent 55%, rgba(0,0,0,.34) 100%),
-      linear-gradient(180deg, rgba(255,255,255,.012), transparent 18% 82%, rgba(0,0,0,.2));
+    top:10px;
+    left:10px;
+    z-index:100;
+    transform:translateY(-160%);
+    padding:12px 18px;
+    border-radius:14px;
+    background:var(--md-primary);
+    color:var(--md-on-primary);
+    font-size:13px;
+    text-decoration:none;
+    transition:transform .18s ease;
   }
-  body::after{
-    content:"";
-    position:fixed;
-    inset:0;
-    z-index:60;
-    pointer-events:none;
-    opacity:.035;
-    mix-blend-mode:soft-light;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    background-size:180px 180px;
+  .skip-link:focus{transform:translateY(0)}
+
+  .app{
+    width:min(1180px,100%);
+    margin:0 auto;
+    padding:0 clamp(20px,4vw,48px);
   }
 
-  ::selection{background:rgba(190,160,110,.32);color:#fff8e8}
-
-  .page{
-    position:relative;
-    z-index:1;
-    min-height:100svh;
+  .top-app-bar{
     display:flex;
-    flex-direction:column;
-    padding:clamp(18px,3.4vh,34px) var(--gutter) clamp(14px,2.6vh,26px);
-  }
-
-  /* ---------- page chrome ---------- */
-  .topbar{
-    display:grid;
-    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
     align-items:center;
-    gap:24px;
-    min-height:28px;
-    color:var(--paper-3);
-    font:400 9px/1.5 var(--mono);
-    letter-spacing:.18em;
-    text-transform:uppercase;
+    justify-content:space-between;
+    gap:20px;
+    min-height:82px;
+    border-bottom:1px solid var(--md-outline-variant);
+    transition:border-color .28s ease;
   }
   .brand{
     display:flex;
     align-items:center;
-    gap:12px;
+    gap:13px;
     min-width:0;
+    margin-left:-7px;
+    padding:6px 7px;
+    border-radius:16px;
+    text-decoration:none;
   }
-  .seal{
+  .brand:hover{background:var(--md-hover)}
+  .brand:focus-visible,
+  .theme-chip:focus-visible,
+  .filled-button:focus-visible,
+  .tonal-button:focus-visible,
+  .page-card:focus-visible,
+  .random-button:focus-visible{
+    outline:3px solid var(--md-primary);
+    outline-offset:3px;
+  }
+  .brand-mark{
     flex:0 0 auto;
-    width:27px;
-    height:27px;
     display:grid;
-    place-items:center;
-    border:1px solid rgba(199,177,139,.45);
-    color:var(--paper-2);
-    font-family:var(--cn);
-    font-size:15px;
-    line-height:1;
-    letter-spacing:0;
-    background:linear-gradient(145deg, rgba(190,160,110,.10), rgba(0,0,0,0));
-    box-shadow:inset 0 0 18px rgba(190,160,110,.06);
+    grid-template-columns:repeat(2,1fr);
+    gap:3px;
+    width:42px;
+    height:42px;
+    padding:9px;
+    border-radius:15px;
+    background:var(--md-primary-container);
+    transition:background-color .28s ease;
   }
-  .brand-copy{line-height:1.6;white-space:nowrap}
-  .brand-copy strong{
-    display:block;
-    color:var(--paper-2);
-    font-weight:400;
-    letter-spacing:.2em;
-  }
-  .brand-copy span{color:#747569;letter-spacing:.16em}
-
-  .plate-title{
-    display:flex;
-    align-items:center;
-    gap:16px;
-    white-space:nowrap;
-    color:#cfc5ae;
-    letter-spacing:.34em;
-    font-size:9px;
-  }
-  .plate-title::before,.plate-title::after{
-    content:"";
-    display:block;
-    width:clamp(24px,4vw,64px);
-    height:1px;
-    background:linear-gradient(90deg, transparent, rgba(205,190,160,.28));
-  }
-  .plate-title::after{transform:scaleX(-1)}
-
-  .meta-right{
-    display:flex;
-    justify-content:flex-end;
-    gap:22px;
+  .brand-mark span{display:block;background:var(--md-primary);transition:background-color .28s ease}
+  .brand-mark span:nth-child(1){border-radius:3px}
+  .brand-mark span:nth-child(2){border-radius:50%}
+  .brand-mark span:nth-child(3){border-radius:50% 50% 3px 50%}
+  .brand-mark span:nth-child(4){border-radius:3px 3px 50% 50%}
+  .brand-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .brand-text strong{
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:.045em;
     white-space:nowrap;
   }
-  .meta-right span:last-child{color:#787a70}
-
-  .main{
-    flex:1;
-    display:grid;
-    place-items:center;
-    padding:clamp(14px,3vh,28px) 0;
-    min-height:0;
-  }
-
-  /* ---------- stage geometry ---------- */
-  .stage{
-    position:relative;
-    width:min(1180px, calc(100vw - var(--gutter) * 2), calc((100svh - 188px) * 1.7612));
-    aspect-ratio:1180 / 670;
-    isolation:isolate;
-    background:#030504;
-    box-shadow:
-      0 38px 80px -30px rgba(0,0,0,.9),
-      0 0 90px -30px rgba(126,160,143,.16),
-      0 0 0 1px rgba(213,199,169,.12);
-  }
-  .stage::before{
-    content:"";
-    position:absolute;
-    inset:-1px;
-    z-index:8;
-    pointer-events:none;
-    background:
-      linear-gradient(var(--bronze),var(--bronze)) left top / 13px 1px no-repeat,
-      linear-gradient(var(--bronze),var(--bronze)) left top / 1px 13px no-repeat,
-      linear-gradient(var(--bronze),var(--bronze)) right top / 13px 1px no-repeat,
-      linear-gradient(var(--bronze),var(--bronze)) right top / 1px 13px no-repeat,
-      linear-gradient(var(--bronze),var(--bronze)) left bottom / 13px 1px no-repeat,
-      linear-gradient(var(--bronze),var(--bronze)) left bottom / 1px 13px no-repeat,
-      linear-gradient(var(--bronze),var(--bronze)) right bottom / 13px 1px no-repeat,
-      linear-gradient(var(--bronze),var(--bronze)) right bottom / 1px 13px no-repeat;
-    opacity:.42;
-  }
-
-  .scene{
-    position:absolute;
-    left:var(--art-x);
-    top:var(--art-y);
-    width:var(--art-w);
-    height:var(--art-h);
-    z-index:1;
-    overflow:hidden;
-    background:#07100e;
-    container-type:inline-size;
-  }
-  .scene-art{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    display:block;
-  }
-  .scene-copy{
-    position:absolute;
-    left:26%;
-    top:32.2%;
-    width:45%;
-    z-index:2;
-    pointer-events:none;
-    text-shadow:0 2px 28px rgba(0,0,0,.75), 0 1px 2px rgba(0,0,0,.8);
-  }
-  .scene-copy::before{
-    content:"";
-    position:absolute;
-    inset:-22% -18% -30% -20%;
-    z-index:-1;
-    background:radial-gradient(ellipse at 32% 52%, rgba(2,5,4,.38), rgba(2,5,4,.1) 50%, transparent 74%);
-    filter:blur(11px);
-  }
-  .scene-kicker{
-    display:flex;
-    align-items:center;
-    gap:1.15em;
-    margin:0 0 2.1cqw;
-    color:rgba(226,215,191,.56);
-    font:400 1.02cqw/1.4 var(--mono);
-    letter-spacing:.24em;
-    text-transform:uppercase;
-    white-space:nowrap;
-  }
-  .scene-kicker::before{
-    content:"";
-    width:2.6cqw;
-    height:1px;
-    background:linear-gradient(90deg, rgba(211,191,156,.55), rgba(211,191,156,.08));
-  }
-  .scene-title{
-    margin:0;
-    color:#e9e0cb;
-    font:400 10.6cqw/.96 var(--cn);
-    letter-spacing:.09em;
-    white-space:nowrap;
-    text-shadow:
-      0 0 1px rgba(255,248,226,.2),
-      0 1.2cqw 4.5cqw rgba(0,0,0,.62),
-      0 0 8cqw rgba(207,184,139,.08);
-  }
-  .scene-meta{
-    display:flex;
-    align-items:center;
-    gap:1.5cqw;
-    margin-top:2.2cqw;
-    white-space:nowrap;
-  }
-  .scene-en{
-    color:rgba(231,220,195,.7);
-    font:400 1.1cqw/1 var(--mono);
-    letter-spacing:.42em;
-  }
-  .scene-sep{
-    width:2.4cqw;
-    height:1px;
-    background:rgba(214,197,163,.32);
-  }
-  .scene-tag{
-    color:rgba(213,203,181,.55);
-    font:400 1.24cqw/1.2 var(--cn);
-    letter-spacing:.2em;
-  }
-
-  /* ---------- mirrored glass ---------- */
-  .mirror-glass{
-    position:absolute;
-    inset:0;
-    z-index:2;
-    pointer-events:none;
-    background:
-      linear-gradient(112deg, rgba(200,229,217,.085) 0%, rgba(200,229,217,.02) 22%, transparent 42% 61%, rgba(197,207,184,.026) 76%, rgba(0,0,0,.05) 100%),
-      radial-gradient(120% 95% at 50% 6%, rgba(188,220,204,.065), transparent 42%),
-      radial-gradient(125% 105% at 50% 50%, transparent 52%, rgba(0,0,0,.09) 80%, rgba(0,0,0,.22) 100%);
-    -webkit-backdrop-filter:url(#mirror-filter) brightness(1.04) saturate(.82) contrast(1.01) blur(.8px);
-    backdrop-filter:url(#mirror-filter) brightness(1.04) saturate(.82) contrast(1.01) blur(.8px);
-  }
-  .mirror-off .mirror-glass{display:none}
-  .no-backdrop .mirror-glass{display:none}
-  .no-js .mirror-glass{display:none}
-  .scene--foreground{
-    z-index:3;
-    pointer-events:none;
-    user-select:none;
-  }
-  .mirror-off .scene--foreground,
-  .no-backdrop .scene--foreground,
-  .no-js .scene--foreground{display:none}
-
-  /* glass seams + frame */
-  .frame{
-    position:absolute;
-    left:var(--art-x);
-    top:var(--art-y);
-    width:var(--art-w);
-    height:var(--art-h);
-    z-index:4;
-    pointer-events:none;
-    border:1px solid rgba(224,210,180,.38);
-    box-shadow:
-      0 0 0 1px rgba(0,0,0,.4),
-      0 0 36px rgba(177,206,191,.08),
-      inset 0 0 26px rgba(0,0,0,.2);
-  }
-  .frame::before,.frame::after{
-    content:"";
-    position:absolute;
-    pointer-events:none;
-  }
-  .frame::before{
-    left:50%; top:-4px;
-    width:1px; height:9px;
-    background:rgba(222,205,171,.55);
-    box-shadow:0 0 8px rgba(224,208,177,.28);
-  }
-  .frame::after{
-    left:-4px; top:50%;
-    width:9px; height:1px;
-    background:rgba(222,205,171,.36);
-  }
-  .frame-tick{
-    position:absolute;
-    z-index:4;
-    pointer-events:none;
-    background:rgba(213,196,164,.32);
-  }
-  .frame-tick.t{left:50%;top:calc(var(--art-y) - 5px);width:1px;height:10px}
-  .frame-tick.b{left:50%;top:calc(var(--art-y) + var(--art-h) - 5px);width:1px;height:10px}
-  .frame-tick.l{left:calc(var(--art-x) - 5px);top:50%;width:10px;height:1px}
-  .frame-tick.r{left:calc(var(--art-x) + var(--art-w) - 5px);top:50%;width:10px;height:1px}
-  .frame-tick::after{
-    content:"";
-    position:absolute;
-    left:50%;top:50%;
-    width:3px;height:3px;
-    border:1px solid rgba(226,210,178,.55);
-    transform:translate(-50%,-50%) rotate(45deg);
-    background:var(--ink);
-  }
-
-  /* ---------- annotations ---------- */
-  .annos{
-    position:absolute;
-    inset:0;
-    z-index:5;
-    pointer-events:none;
-    color:rgba(218,207,184,.56);
-    font:400 .64cqw/1.6 var(--mono);
-    letter-spacing:.2em;
-    text-transform:uppercase;
-    transition:opacity .35s ease;
-  }
-  .stage{container-type:inline-size}
-  .anno{
-    position:absolute;
-    display:flex;
-    flex-direction:column;
-    gap:.55em;
-    align-items:center;
-    text-align:center;
-    text-shadow:0 1px 12px rgba(0,0,0,.9);
-  }
-  .anno .cn{
-    color:rgba(234,223,200,.8);
-    font:400 1.14cqw/1.55 var(--cn);
-    letter-spacing:.3em;
-    text-indent:.3em;
-  }
-  .anno .en{color:rgba(209,200,179,.5);white-space:nowrap}
-  .anno--top{top:4.2%;left:21%;align-items:flex-start;text-align:left}
-  .anno--bottom{bottom:3.8%;right:21%;align-items:flex-end;text-align:right}
-  .anno--left{left:3.4%;top:50%;transform:translateY(-50%)}
-  .anno--right{right:3.4%;top:50%;transform:translateY(-50%)}
-  .anno--corner{
-    gap:.4em;
-    color:rgba(210,197,171,.34);
-    font-size:.58cqw;
+  .brand-text span{
+    color:var(--md-on-surface-variant);
+    font-size:10px;
     letter-spacing:.16em;
+    text-transform:uppercase;
   }
-  .anno--corner .cn{
-    font-size:.88cqw;
-    color:rgba(217,204,180,.54);
-    letter-spacing:.18em;
-    text-indent:.18em;
-  }
-  .anno--c1{left:5.2%;top:4.2%;align-items:flex-start;text-align:left}
-  .anno--c2{right:5.2%;top:4.2%;align-items:flex-end;text-align:right}
-  .anno--c3{left:5.2%;bottom:3.8%;align-items:flex-start;text-align:left}
-  .anno--c4{right:5.2%;bottom:3.8%;align-items:flex-end;text-align:right}
-  .anno--top::after,.anno--bottom::after{
-    content:"";
-    width:3.2cqw;
-    height:1px;
-    margin-top:.2em;
-    background:linear-gradient(90deg, rgba(205,190,160,.25), transparent);
-  }
-  .anno--bottom::after{transform:scaleX(-1)}
-  .trace-off .annos{opacity:0;visibility:hidden}
 
-  /* ---------- footer ---------- */
-  .bottombar{
-    display:grid;
-    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  .top-actions{display:flex;align-items:center;gap:18px}
+  .status-pill{
+    display:inline-flex;
     align-items:center;
-    gap:24px;
-    min-height:28px;
-    color:#74776c;
-    font:400 8.5px/1.5 var(--mono);
+    gap:8px;
+    min-height:34px;
+    padding:0 13px;
+    border-radius:17px;
+    background:var(--md-secondary-container);
+    color:var(--md-on-secondary-container);
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.13em;
+    transition:background-color .28s ease,color .28s ease;
+  }
+  .status-dot{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--md-primary);
+    transition:background-color .28s ease;
+  }
+  .top-meta{
+    color:var(--md-on-surface-variant);
+    font-size:10px;
     letter-spacing:.14em;
     text-transform:uppercase;
   }
-  .tech{display:flex;align-items:center;gap:9px;flex-wrap:wrap;white-space:nowrap}
-  .tech i{color:#3d423d;font-style:normal}
-  .tech span{color:#83867a}
-  .foot-mid{
-    color:#6b6e64;
-    white-space:nowrap;
-    letter-spacing:.18em;
+
+  .hero{
+    display:grid;
+    grid-template-columns:minmax(0,1.1fr) minmax(300px,.7fr);
+    gap:clamp(32px,6vw,82px);
+    align-items:center;
+    padding:clamp(56px,9vh,112px) 0 clamp(40px,7vh,82px);
   }
-  .controls{
-    display:flex;
-    justify-content:flex-end;
-    gap:8px;
-  }
-  .ctl{
-    appearance:none;
-    border:1px solid rgba(206,191,163,.16);
-    background:rgba(255,255,255,.012);
-    color:#7b7c71;
-    padding:6px 9px 5px;
-    font:400 8.5px/1 var(--mono);
-    letter-spacing:.16em;
+  .eyebrow{
+    margin:0;
+    color:var(--md-primary);
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.2em;
     text-transform:uppercase;
-    cursor:pointer;
-    transition:border-color .2s, color .2s, background .2s;
+    transition:color .28s ease;
+  }
+  h1{
+    margin:18px 0 24px;
+    font-size:clamp(52px,7.4vw,98px);
+    font-weight:500;
+    line-height:.98;
+    letter-spacing:-.055em;
+  }
+  h1 span{
+    display:block;
+    margin-top:.2em;
+    color:var(--md-on-surface-variant);
+    font-size:.5em;
+    font-weight:400;
+    letter-spacing:-.01em;
+  }
+  .lede{
+    max-width:36rem;
+    margin:0;
+    color:var(--md-on-surface-variant);
+    font-size:clamp(15px,1.35vw,17px);
+    line-height:1.8;
+    letter-spacing:.005em;
+  }
+  .hero-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-top:32px;
+  }
+  .filled-button,
+  .tonal-button{
     display:inline-flex;
     align-items:center;
-    gap:7px;
+    justify-content:center;
+    gap:10px;
+    min-height:48px;
+    padding:0 24px;
+    border:0;
+    border-radius:24px;
+    font-size:14px;
+    font-weight:500;
+    letter-spacing:.01em;
+    text-decoration:none;
+    cursor:pointer;
+    transition:background-color .2s ease,color .2s ease,box-shadow .2s ease,transform .12s ease;
   }
-  .ctl:hover{border-color:rgba(214,198,169,.34);color:#c7bca7;background:rgba(214,198,169,.04)}
-  .ctl:focus-visible{outline:1px solid rgba(226,209,176,.7);outline-offset:2px}
-  .ctl .dot{
-    width:4px;height:4px;
-    border:1px solid currentColor;
+  .filled-button{
+    background:var(--md-primary);
+    color:var(--md-on-primary);
+    box-shadow:0 1px 2px var(--md-shadow);
+  }
+  .filled-button:hover{background:color-mix(in srgb,var(--md-primary) 90%,#000);box-shadow:0 2px 6px var(--md-shadow)}
+  .tonal-button{
+    background:var(--md-secondary-container);
+    color:var(--md-on-secondary-container);
+  }
+  .tonal-button:hover{background:color-mix(in srgb,var(--md-secondary-container) 88%,var(--md-primary))}
+  .filled-button:active,.tonal-button:active,.theme-chip:active,.random-button:active{transform:scale(.98)}
+  .button-icon{width:18px;height:18px;flex:0 0 auto}
+
+  .hero-visual{
+    position:relative;
+    min-height:350px;
+    display:flex;
+    align-items:flex-end;
+    padding:22px;
+    overflow:hidden;
+    border:1px solid var(--md-outline-variant);
+    border-radius:36px;
+    background:var(--md-surface-container);
+    transition:background-color .28s ease,border-color .28s ease;
+  }
+  .shape-stage{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+  .shape{
+    position:absolute;
+    display:block;
+    transition:background-color .28s ease,border-radius .28s ease,transform .28s ease;
+  }
+  .shape-1{
+    left:7%;
+    top:8%;
+    width:48%;
+    aspect-ratio:1;
+    border-radius:46% 54% 62% 38% / 45% 40% 60% 55%;
+    background:var(--md-primary);
+    transform:rotate(-8deg);
+  }
+  .shape-2{
+    right:5%;
+    top:4%;
+    width:34%;
+    aspect-ratio:1;
     border-radius:50%;
-    box-shadow:0 0 0 1px rgba(0,0,0,.35);
+    background:var(--md-primary-container);
   }
-  .ctl[aria-pressed="true"] .dot{background:var(--jade);border-color:var(--jade);box-shadow:0 0 8px rgba(147,171,156,.5)}
-  .ctl b{font-weight:400;color:#99988a}
-  .ctl[aria-pressed="true"] b{color:#b7c7b8}
-  .fallback-note{display:none;color:#b88a6e;letter-spacing:.12em}
-  .no-backdrop .fallback-note{display:inline}
+  .shape-3{
+    right:12%;
+    bottom:-4%;
+    width:37%;
+    aspect-ratio:1;
+    border-radius:26px;
+    background:var(--md-tertiary-container);
+    transform:rotate(18deg);
+  }
+  .shape-4{
+    left:12%;
+    bottom:8%;
+    width:21%;
+    aspect-ratio:1;
+    border-radius:50%;
+    background:var(--md-secondary-container);
+  }
+  .theme-readout{
+    position:relative;
+    z-index:2;
+    width:100%;
+    display:grid;
+    gap:3px;
+    padding:14px 16px;
+    border:1px solid var(--md-outline-variant);
+    border-radius:20px;
+    background:color-mix(in srgb,var(--md-surface) 84%,transparent);
+    -webkit-backdrop-filter:blur(10px);
+    backdrop-filter:blur(10px);
+  }
+  .readout-label{
+    color:var(--md-on-surface-variant);
+    font-size:9px;
+    font-weight:600;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+  }
+  .theme-readout strong{
+    font-size:20px;
+    font-weight:500;
+    letter-spacing:-.01em;
+  }
+  .readout-hint{
+    color:var(--md-on-surface-variant);
+    font-size:11px;
+    letter-spacing:.02em;
+  }
 
+  .theme-section,
+  .pages-section{
+    padding:24px 0 10px;
+    border-top:1px solid var(--md-outline-variant);
+    transition:border-color .28s ease;
+  }
+  .section-heading{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:24px;
+    padding:22px 0 20px;
+  }
+  .section-heading h2{
+    margin:0 0 5px;
+    font-size:22px;
+    font-weight:500;
+    letter-spacing:-.015em;
+  }
+  .section-heading p{
+    margin:0;
+    color:var(--md-on-surface-variant);
+    font-size:13px;
+    line-height:1.6;
+  }
+  .section-meta{
+    flex:0 0 auto;
+    color:var(--md-on-surface-variant);
+    font-size:9px;
+    font-weight:600;
+    letter-spacing:.15em;
+    text-transform:uppercase;
+  }
 
-  @media (max-width:980px){
-    .meta-right span:last-child,.foot-mid{display:none}
-    .topbar,.bottombar{gap:14px}
-    .anno .cn{font-size:1.15cqw}
+  .theme-options{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    padding:0 0 28px;
   }
-  .mobile-caption{display:none}
-  @media (max-width:720px){
-    :root{--gutter:16px}
-    .page{padding:16px var(--gutter) 14px}
-    .topbar{grid-template-columns:1fr auto;min-height:24px}
-    .plate-title{display:none}
-    .meta-right{gap:10px;font-size:8px}
-    .meta-right span:first-child{color:#a09c8c}
-    .brand{gap:9px}
-    .seal{width:23px;height:23px;font-size:13px}
-    .brand-copy{font-size:8px}
-    .brand-copy span{display:none}
-    .main{
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      padding:16px 0;
-      gap:20px;
-    }
-    .stage{
-      width:min(150vw,760px);
-      max-width:none;
-      flex:0 0 auto;
-      align-self:flex-start;
-      margin-left:calc((min(150vw,760px) - (100vw - 2 * var(--gutter))) / -2);
-    }
-    .annos{display:none}
-    .tech span:nth-child(n+3),.tech i{display:none}
-    .bottombar{grid-template-columns:1fr auto;gap:8px;font-size:7.5px}
-    .scene-copy{left:0;top:36%;width:100%;text-align:center}
-    .scene-copy::before{inset:-18% -10% -26% -10%;background:radial-gradient(ellipse at 50% 55%,rgba(2,5,4,.44),rgba(2,5,4,.12) 52%,transparent 74%)}
-    .scene-kicker,.scene-tag,.scene-sep{display:none}
-    .scene-title{font-size:16.5cqw;letter-spacing:.12em}
-    .scene-en{font-size:2.05cqw;letter-spacing:.5em}
-    .scene-meta{justify-content:center;margin-top:3cqw}
-    #traceBtn{display:none}
-    .mobile-caption{
-      display:block;
-      max-width:310px;
-      margin:0 auto;
-      color:#6f7167;
-      font:400 9px/1.9 var(--mono);
-      letter-spacing:.12em;
-      text-align:center;
-      text-transform:uppercase;
-    }
-    .mobile-caption span{color:#a59c88;letter-spacing:.24em}
-    .mobile-caption br{display:block}
-    .ctl{padding:6px 7px;font-size:7.5px}
+  .theme-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    min-height:44px;
+    padding:0 16px 0 11px;
+    border:1px solid var(--md-outline);
+    border-radius:22px;
+    background:transparent;
+    color:var(--md-on-surface-variant);
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    transition:background-color .18s ease,color .18s ease,border-color .18s ease,transform .12s ease;
   }
-  @media (max-width:390px){
-    .topbar{grid-template-columns:1fr auto;gap:8px}
-    .meta-right{display:flex;font-size:7.5px}
-    .tech{display:none}
-    .bottombar{grid-template-columns:1fr auto}
+  .theme-chip:hover{background:var(--md-hover)}
+  .theme-chip[aria-pressed="true"]{
+    border-color:transparent;
+    background:var(--md-secondary-container);
+    color:var(--md-on-secondary-container);
   }
+  .theme-dot{
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:var(--dot);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);
+  }
+
+  .pages-section{padding-bottom:clamp(52px,8vh,88px)}
+  .page-card{
+    display:grid;
+    grid-template-columns:54px minmax(0,1fr) auto;
+    gap:clamp(18px,3vw,32px);
+    align-items:center;
+    padding:clamp(24px,3.4vw,38px);
+    border:1px solid var(--md-outline-variant);
+    border-radius:28px;
+    background:var(--md-surface-container-low);
+    text-decoration:none;
+    transition:background-color .28s ease,border-color .28s ease,box-shadow .2s ease,transform .2s ease;
+  }
+  .page-card:hover{
+    background:var(--md-surface-container);
+    box-shadow:0 8px 24px -8px var(--md-shadow);
+    transform:translateY(-2px);
+  }
+  .page-card:active{transform:translateY(0) scale(.995)}
+  .page-number{
+    align-self:start;
+    padding-top:7px;
+    color:var(--md-primary);
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.1em;
+    transition:color .28s ease;
+  }
+  .page-kicker{
+    color:var(--md-on-surface-variant);
+    font-size:9px;
+    font-weight:600;
+    letter-spacing:.17em;
+    text-transform:uppercase;
+  }
+  .page-main h3{
+    margin:8px 0 10px;
+    font-size:clamp(28px,4vw,44px);
+    font-weight:500;
+    line-height:1;
+    letter-spacing:-.045em;
+  }
+  .page-main p{
+    max-width:46rem;
+    margin:0;
+    color:var(--md-on-surface-variant);
+    font-size:14px;
+    line-height:1.75;
+  }
+  .page-action{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    min-height:40px;
+    padding:0 17px;
+    border-radius:20px;
+    background:var(--md-primary-container);
+    color:var(--md-on-primary-container);
+    font-size:12px;
+    font-weight:600;
+    white-space:nowrap;
+    transition:background-color .2s ease,color .2s ease;
+  }
+  .page-card:hover .page-action{
+    background:var(--md-primary);
+    color:var(--md-on-primary);
+  }
+
+  .footer{
+    display:flex;
+    justify-content:space-between;
+    gap:20px;
+    padding:24px 0 40px;
+    border-top:1px solid var(--md-outline-variant);
+    color:var(--md-on-surface-variant);
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    transition:border-color .28s ease,color .28s ease;
+  }
+
+  @media (max-width:860px){
+    .hero{grid-template-columns:1fr;align-items:start;gap:34px}
+    .hero-visual{min-height:320px}
+    .top-meta{display:none}
+  }
+
+  @media (max-width:560px){
+    .app{padding:0 18px}
+    .top-app-bar{min-height:72px}
+    .brand-text span{display:none}
+    .brand-mark{width:38px;height:38px;border-radius:13px;padding:8px}
+    .status-pill{min-height:30px;padding:0 10px;font-size:9px}
+    h1{font-size:clamp(48px,15vw,68px)}
+    .hero{padding-top:44px}
+    .hero-actions{flex-direction:column;align-items:stretch}
+    .filled-button,.tonal-button{width:100%}
+    .hero-visual{min-height:280px;border-radius:28px}
+    .section-heading{align-items:flex-start;flex-direction:column;gap:8px}
+    .theme-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .theme-chip{justify-content:center}
+    .page-card{grid-template-columns:1fr;gap:16px}
+    .page-number{padding-top:0}
+    .page-action{justify-self:start}
+    .footer{flex-direction:column;gap:7px}
+  }
+
   @media (prefers-reduced-motion:reduce){
-    *,*::before,*::after{scroll-behavior:auto !important;transition-duration:.01ms !important;animation-duration:.01ms !important}
+    html{scroll-behavior:auto}
+    *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}
   }
 </style>
 </head>
-<body class="js">
-<div class="page">
-  <header class="topbar">
-    <div class="brand">
-      <span class="seal" aria-hidden="true">镜</span>
-      <span class="brand-copy">
-        <strong>GAMEJAM 2026</strong>
-        <span>STATIC SHOWCASE / 静态展示</span>
-      </span>
-    </div>
-    <div class="plate-title" aria-hidden="true">MIRROR FIELD</div>
-    <div class="meta-right">
-      <span>THEME — 镜</span>
-      <span>STUDY 01 / 2026.10</span>
-    </div>
-  </header>
+<body>
+  <a class="skip-link" href="#pages">跳到页面列表</a>
 
-  <main class="main">
-    <div class="stage" id="stage">
-      <div class="scene" id="scene">
-        <svg class="scene-art" viewBox="0 0 800 450" role="img" aria-label="夜色中的镜湖，月亮停在画面上缘，远处群山与芦苇倒映在水中">
-          <defs>
-            <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#04090a"/>
-              <stop offset=".42" stop-color="#081412"/>
-              <stop offset=".78" stop-color="#11201b"/>
-              <stop offset="1" stop-color="#263022"/>
-            </linearGradient>
-            <radialGradient id="moonHalo" cx=".5" cy=".5" r=".5">
-              <stop offset="0" stop-color="#f4e8c9" stop-opacity=".33"/>
-              <stop offset=".1" stop-color="#e9d8b4" stop-opacity=".24"/>
-              <stop offset=".34" stop-color="#b7b28e" stop-opacity=".09"/>
-              <stop offset=".7" stop-color="#7c8d7c" stop-opacity=".025"/>
-              <stop offset="1" stop-color="#7c8d7c" stop-opacity="0"/>
-            </radialGradient>
-            <linearGradient id="moonFace" x1="0" y1="0" x2="1" y2=".86">
-              <stop offset="0" stop-color="#f5ecd4"/>
-              <stop offset=".52" stop-color="#e7dcc0"/>
-              <stop offset="1" stop-color="#c9bda0"/>
-            </linearGradient>
-            <linearGradient id="farRidge" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#132420"/>
-              <stop offset="1" stop-color="#0b1916"/>
-            </linearGradient>
-            <linearGradient id="nearRidge" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#0b1916"/>
-              <stop offset="1" stop-color="#040b0a"/>
-            </linearGradient>
-            <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#0d1d19"/>
-              <stop offset=".36" stop-color="#081310"/>
-              <stop offset="1" stop-color="#020707"/>
-            </linearGradient>
-            <radialGradient id="horizonGlow" cx=".5" cy="1" r=".72">
-              <stop offset="0" stop-color="#d8d9b8" stop-opacity=".17"/>
-              <stop offset=".42" stop-color="#8fa286" stop-opacity=".055"/>
-              <stop offset="1" stop-color="#8fa286" stop-opacity="0"/>
-            </radialGradient>
-            <linearGradient id="nebulaGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stop-color="#a9bfae" stop-opacity="0"/>
-              <stop offset=".3" stop-color="#b9cbb8" stop-opacity=".055"/>
-              <stop offset=".5" stop-color="#dfd6b9" stop-opacity=".09"/>
-              <stop offset=".72" stop-color="#9eb6a5" stop-opacity=".045"/>
-              <stop offset="1" stop-color="#a9bfae" stop-opacity="0"/>
-            </linearGradient>
-            <linearGradient id="waterFade" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#020606" stop-opacity="0"/>
-              <stop offset=".34" stop-color="#020606" stop-opacity=".14"/>
-              <stop offset="1" stop-color="#020606" stop-opacity=".58"/>
-            </linearGradient>
-            <radialGradient id="moonPath" cx=".5" cy=".5" r=".5">
-              <stop offset="0" stop-color="#f1e3c2" stop-opacity=".34"/>
-              <stop offset=".55" stop-color="#dbcda9" stop-opacity=".12"/>
-              <stop offset="1" stop-color="#dbcda9" stop-opacity="0"/>
-            </radialGradient>
-            <radialGradient id="lanternGlow" cx=".5" cy=".5" r=".5">
-              <stop offset="0" stop-color="#ffbd82" stop-opacity=".55"/>
-              <stop offset=".28" stop-color="#dc8b55" stop-opacity=".25"/>
-              <stop offset="1" stop-color="#dc8b55" stop-opacity="0"/>
-            </radialGradient>
-            <linearGradient id="frameGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#d6c5a2" stop-opacity=".3"/>
-              <stop offset=".5" stop-color="#cdbd9d" stop-opacity=".12"/>
-              <stop offset="1" stop-color="#d6c5a2" stop-opacity=".26"/>
-            </linearGradient>
-            <filter id="blur-sm" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="1.2"/>
-            </filter>
-            <filter id="blur-md" x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="7"/>
-            </filter>
-            <filter id="blur-lg" x="-40%" y="-80%" width="180%" height="260%">
-              <feGaussianBlur stdDeviation="20"/>
-            </filter>
-            <clipPath id="waterClip"><rect x="0" y="300" width="800" height="150"/></clipPath>
-            <clipPath id="sceneClip"><rect x="0" y="0" width="800" height="450"/></clipPath>
-          </defs>
+  <div class="app">
+    <header class="top-app-bar">
+      <a class="brand" href="./" aria-current="page">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </span>
+        <span class="brand-text">
+          <strong>ELLIA PAGES</strong>
+          <span>GameJam 2026</span>
+        </span>
+      </a>
+      <div class="top-actions">
+        <span class="status-pill"><span class="status-dot" aria-hidden="true"></span>STATIC</span>
+        <span class="top-meta">2026 / 10</span>
+      </div>
+    </header>
 
-          <rect width="800" height="450" fill="url(#skyGrad)"/>
-          <ellipse cx="420" cy="74" rx="392" ry="62" fill="url(#nebulaGrad)" transform="rotate(-13 420 74)" filter="url(#blur-lg)"/>
-          <g id="stars" aria-hidden="true"></g>
-
-          <circle cx="400" cy="0" r="168" fill="url(#moonHalo)"/>
-          <g fill="none" stroke="#ded0ae">
-            <circle cx="400" cy="0" r="76" stroke-opacity=".19" stroke-width=".7"/>
-            <circle cx="400" cy="0" r="103" stroke-opacity=".13" stroke-width=".6" stroke-dasharray="1 7"/>
-            <circle cx="400" cy="0" r="137" stroke-opacity=".08" stroke-width=".6"/>
-            <circle cx="400" cy="0" r="184" stroke-opacity=".05" stroke-width=".6"/>
-          </g>
-          <circle cx="400" cy="0" r="58" fill="url(#moonFace)"/>
-          <g fill="none" stroke="#8f846c" stroke-opacity=".16" stroke-width=".6">
-            <circle cx="379" cy="27" r="9"/>
-            <circle cx="419" cy="38" r="5.5"/>
-            <path d="M388 51 q10 -4 20 1"/>
-          </g>
-          <path d="M400 0 V300" stroke="#d8c8a6" stroke-opacity=".055" stroke-width=".7" stroke-dasharray="1 11"/>
-
-          <g id="ridges">
-            <path fill="#1a2a24" opacity=".42"
-              d="M0 278 L44 263 L92 274 L140 251 L188 268 L236 249 L284 266 L332 252 L380 268 L428 252 L476 267 L524 250 L572 266 L620 251 L668 268 L716 252 L764 269 L800 258 L800 300 L0 300 Z"/>
-            <path id="ridgeFar" fill="url(#farRidge)"
-              d="M0 286 L26 272 L52 279 L78 259 L104 270 L132 251 L160 266 L186 255 L214 268 L240 258 L268 272 L294 261 L322 275 L348 264 L376 278 L402 267 L430 279 L456 263 L484 275 L510 262 L538 276 L564 265 L592 278 L618 263 L646 277 L672 266 L700 279 L726 268 L754 281 L782 269 L800 279 L800 310 L0 310 Z"/>
-            <path fill="none" stroke="#b6c4ab" stroke-opacity=".11" stroke-width=".7"
-              d="M0 286 L26 272 L52 279 L78 259 L104 270 L132 251 L160 266 L186 255 L214 268 L240 258 L268 272 L294 261 L322 275 L348 264 L376 278 L402 267 L430 279 L456 263 L484 275 L510 262 L538 276 L564 265 L592 278 L618 263 L646 277 L672 266 L700 279 L726 268 L754 281 L782 269 L800 279"/>
-            <path id="ridgeNear" fill="url(#nearRidge)"
-              d="M0 302 L34 290 L62 296 L92 283 L124 295 L154 286 L184 297 L214 288 L246 299 L276 292 L308 301 L338 294 L370 303 L400 296 L432 304 L462 295 L494 303 L524 292 L554 302 L584 294 L614 304 L644 296 L674 305 L704 297 L736 306 L766 298 L800 305 L800 316 L0 316 Z"/>
-          </g>
-          <ellipse cx="400" cy="299" rx="540" ry="96" fill="url(#horizonGlow)"/>
-          <ellipse cx="398" cy="289" rx="420" ry="26" fill="#c3cfb4" opacity=".075" filter="url(#blur-md)"/>
-
-          <rect x="0" y="300" width="800" height="150" fill="url(#waterGrad)"/>
-          <g clip-path="url(#waterClip)" opacity=".24" filter="url(#blur-sm)">
-            <use href="#ridges" transform="matrix(1 0 0 -1 0 600)"/>
-          </g>
-          <g clip-path="url(#waterClip)">
-            <ellipse cx="400" cy="333" rx="74" ry="22" fill="url(#moonPath)"/>
-            <g fill="none" stroke="#e6d8b7" stroke-linecap="round" opacity=".38">
-              <path d="M352 322 h96" stroke-width="1.1"/>
-              <path d="M368 330 h64" stroke-width=".8" opacity=".8"/>
-              <path d="M383 338 h34" stroke-width=".7" opacity=".7"/>
-              <path d="M358 347 h84" stroke-width=".5" opacity=".5"/>
-              <path d="M390 356 h20" stroke-width=".5" opacity=".5"/>
-            </g>
-          </g>
-          <rect x="0" y="300" width="800" height="150" fill="url(#waterFade)"/>
-          <g id="ripples" clip-path="url(#waterClip)" fill="none" stroke="#cbd5bf" stroke-linecap="round"></g>
-
-          <g id="boat" transform="translate(682 311)">
-            <path d="M-27 2 Q-7 10 28 0 L21 7 Q-1 13 -22 6 Z" fill="#040908" stroke="#6d634b" stroke-opacity=".48" stroke-width=".6"/>
-            <path d="M0 0 V-25 M0 -25 Q15 -13 0 -2" fill="none" stroke="#736a54" stroke-opacity=".72" stroke-width=".65"/>
-            <circle cx="9" cy="-3.5" r="2.1" fill="#e6a06b"/>
-            <circle cx="9" cy="-3.5" r="14" fill="url(#lanternGlow)"/>
-            <g transform="scale(1,-1)" opacity=".16" filter="url(#blur-sm)">
-              <path d="M-27 -2 Q-7 -10 28 0 L21 -7 Q-1 -13 -22 -6 Z" fill="#030807"/>
-              <circle cx="9" cy="3.5" r="8" fill="#b87d55" opacity=".4"/>
-            </g>
-          </g>
-
-          <g aria-hidden="true">
-            <circle cx="236" cy="364" r="1.7" fill="#e2a06e" opacity=".85"/>
-            <circle cx="236" cy="364" r="12" fill="url(#lanternGlow)" opacity=".8"/>
-            <path d="M228 371 h16 M231 378 h10" stroke="#d8c7a5" stroke-opacity=".14" stroke-width=".5"/>
-            <circle cx="708" cy="345" r="1.35" fill="#d99a6d" opacity=".72"/>
-            <circle cx="708" cy="345" r="9" fill="url(#lanternGlow)" opacity=".65"/>
-            <path d="M702 350 h12 M705 355 h6" stroke="#d8c7a5" stroke-opacity=".1" stroke-width=".5"/>
-          </g>
-
-          <g id="reeds-left" fill="none" stroke="#7e896b" stroke-opacity=".42" stroke-linecap="round">
-            <path d="M24 450 Q33 406 19 357" stroke-width=".9"/>
-            <path d="M43 450 Q34 410 49 371" stroke-width=".8"/>
-            <path d="M61 450 Q51 418 68 386" stroke-width=".7"/>
-            <path d="M15 450 Q12 414 4 383" stroke-width=".7"/>
-            <path d="M80 450 Q74 425 91 401" stroke-width=".6"/>
-            <g fill="#9f9876" stroke="none" opacity=".42">
-              <ellipse cx="18" cy="355" rx="1.6" ry="5" transform="rotate(14 18 355)"/>
-              <ellipse cx="50" cy="369" rx="1.4" ry="4.4" transform="rotate(8 50 369)"/>
-              <ellipse cx="69" cy="384" rx="1.2" ry="3.6" transform="rotate(18 69 384)"/>
-              <ellipse cx="3" cy="381" rx="1.2" ry="3.4" transform="rotate(-8 3 381)"/>
-            </g>
-            <path d="M25 391 q-13 -2 -18 -9 M45 405 q13 -3 19 -10 M60 421 q-12 0 -17 -6" stroke-width=".55" opacity=".65"/>
-          </g>
-          <g id="reeds-right" fill="none" stroke="#7a8569" stroke-opacity=".38" stroke-linecap="round">
-            <path d="M776 450 Q766 406 780 361" stroke-width=".85"/>
-            <path d="M759 450 Q765 414 751 378" stroke-width=".75"/>
-            <path d="M741 450 Q748 423 733 395" stroke-width=".65"/>
-            <path d="M788 450 Q793 416 797 388" stroke-width=".65"/>
-            <path d="M719 450 Q723 430 711 409" stroke-width=".55"/>
-            <g fill="#9a9472" stroke="none" opacity=".36">
-              <ellipse cx="780" cy="359" rx="1.5" ry="5" transform="rotate(-12 780 359)"/>
-              <ellipse cx="751" cy="376" rx="1.3" ry="4.2" transform="rotate(-10 751 376)"/>
-              <ellipse cx="733" cy="393" rx="1.1" ry="3.5" transform="rotate(-8 733 393)"/>
-            </g>
-            <path d="M775 401 q13 -3 18 -10 M753 419 q-12 0 -17 -6" stroke-width=".5" opacity=".6"/>
-          </g>
-
-          <g fill="none" stroke="url(#frameGrad)">
-            <path d="M20 20 H330 M470 20 H780 M20 20 V430 M780 20 V430 M20 430 H780" stroke-width=".8"/>
-            <g stroke-width=".8" stroke-opacity=".8">
-              <path d="M20 33 V20 H33 M767 20 H780 V33 M780 417 V430 H767 M33 430 H20 V417"/>
-            </g>
-            <g stroke-width=".55" stroke-opacity=".55">
-              <path d="M200 430 v5 M400 430 v5 M600 430 v5"/>
-              <path d="M20 200 h-5 M20 300 h-5 M780 200 h5 M780 300 h5"/>
-            </g>
-            <g stroke="#d3c4a4" stroke-opacity=".24" stroke-width=".7">
-              <path d="M36 66 V36 H66 M734 36 H764 V66 M36 384 V414 H66 M764 384 V414 H734"/>
-            </g>
-            <g fill="#cdbd9d" fill-opacity=".3" stroke="none">
-              <path d="M400 19 l2.2 2.2 -2.2 2.2 -2.2 -2.2 Z"/>
-              <path d="M779 300 l2.2 2.2 -2.2 2.2 -2.2 -2.2 Z"/>
-            </g>
-          </g>
-        </svg>
-
-        <div class="scene-copy">
-          <p class="scene-kicker">GAMEJAM 2026 · THEME / 镜</p>
-          <h1 class="scene-title">镜湖</h1>
-          <div class="scene-meta">
-            <span class="scene-en">MIRROR LAKE</span>
-            <span class="scene-sep" aria-hidden="true"></span>
-            <span class="scene-tag">水面之上，另一个世界</span>
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Project index · 01 page</p>
+          <h1 id="hero-title">页面目录<span>与浏览器实验</span></h1>
+          <p class="lede">GameJam 2026 的静态页面集合。用 HTML、CSS 和原生 JavaScript 做图形、排版与交互实验。</p>
+          <div class="hero-actions">
+            <a class="filled-button" href="#pages">
+              浏览页面
+              <svg class="button-icon" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M4 10h11M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+            <button class="tonal-button" id="randomTheme" type="button">换个颜色</button>
           </div>
         </div>
-      </div>
 
-      <div class="mirror-glass" id="mirrorGlass" aria-hidden="true"></div>
-      <div class="frame" id="frame" aria-hidden="true"></div>
-      <span class="frame-tick t" aria-hidden="true"></span>
-      <span class="frame-tick b" aria-hidden="true"></span>
-      <span class="frame-tick l" aria-hidden="true"></span>
-      <span class="frame-tick r" aria-hidden="true"></span>
+        <aside class="hero-visual" aria-label="当前 Material 3 主题色">
+          <div class="shape-stage" aria-hidden="true">
+            <span class="shape shape-1"></span>
+            <span class="shape shape-2"></span>
+            <span class="shape shape-3"></span>
+            <span class="shape shape-4"></span>
+          </div>
+          <div class="theme-readout">
+            <span class="readout-label">Current theme</span>
+            <strong id="themeName" aria-live="polite">紫罗兰</strong>
+            <span class="readout-hint">Material 3 · seed color</span>
+          </div>
+        </aside>
+      </section>
 
-      <div class="annos" id="annos" aria-hidden="true">
-        <div class="anno anno--corner anno--c1"><span class="cn">组合</span><span class="en">COMPOUND</span></div>
-        <div class="anno anno--corner anno--c2"><span class="cn">组合</span><span class="en">COMPOUND</span></div>
-        <div class="anno anno--corner anno--c3"><span class="cn">组合</span><span class="en">COMPOUND</span></div>
-        <div class="anno anno--corner anno--c4"><span class="cn">组合</span><span class="en">COMPOUND</span></div>
+      <section class="theme-section" aria-labelledby="theme-heading">
+        <div class="section-heading">
+          <div>
+            <h2 id="theme-heading">主题色</h2>
+            <p>切换 seed color，页面会同步更新 Material 3 色彩角色。</p>
+          </div>
+          <span class="section-meta">Dynamic color</span>
+        </div>
+        <div class="theme-options" role="group" aria-label="选择主题色">
+          <button class="theme-chip" type="button" data-theme-choice="purple" aria-pressed="true">
+            <span class="theme-dot" style="--dot:#6750A4" aria-hidden="true"></span>
+            <span>紫罗兰</span>
+          </button>
+          <button class="theme-chip" type="button" data-theme-choice="teal" aria-pressed="false">
+            <span class="theme-dot" style="--dot:#006A60" aria-hidden="true"></span>
+            <span>青绿</span>
+          </button>
+          <button class="theme-chip" type="button" data-theme-choice="coral" aria-pressed="false">
+            <span class="theme-dot" style="--dot:#8F4C38" aria-hidden="true"></span>
+            <span>珊瑚</span>
+          </button>
+          <button class="theme-chip" type="button" data-theme-choice="blue" aria-pressed="false">
+            <span class="theme-dot" style="--dot:#0061A4" aria-hidden="true"></span>
+            <span>湖蓝</span>
+          </button>
+        </div>
+      </section>
 
-        <div class="anno anno--top"><span class="cn">沿顶边 X 镜像</span><span class="en">REFLECTION · TOP</span></div>
-        <div class="anno anno--bottom"><span class="cn">沿底边 X 镜像</span><span class="en">REFLECTION · BOTTOM</span></div>
-        <div class="anno anno--left"><span class="cn">沿左边 Y 镜像</span><span class="en">REFLECTION · LEFT</span></div>
-        <div class="anno anno--right"><span class="cn">沿右边 Y 镜像</span><span class="en">REFLECTION · RIGHT</span></div>
-      </div>
-    </div>
-    <p class="mobile-caption"><span>MIRROR FIELD</span><br>中心为实像，四周为实时镜像<br>横屏可查看完整镜面场</p>
-  </main>
+      <section class="pages-section" id="pages" aria-labelledby="pages-heading">
+        <div class="section-heading">
+          <div>
+            <h2 id="pages-heading">页面</h2>
+            <p>当前收录 1 个页面。</p>
+          </div>
+          <span class="section-meta">01 / 01</span>
+        </div>
 
-  <footer class="bottombar">
-    <div class="tech">
-      <span>SVG FILTER</span><i>×</i><span>PROCEDURAL DISPLACEMENT</span><i>×</i><span>BACKDROP-FILTER</span>
-      <span class="fallback-note">— backdrop-filter url unsupported</span>
-    </div>
-    <div class="foot-mid">SPECIMEN 001 — KEY ART / PLACEHOLDER</div>
-    <div class="controls">
-      <button class="ctl" id="mirrorBtn" type="button" aria-pressed="true" title="切换镜像效果（M）">
-        <span class="dot" aria-hidden="true"></span>MIRROR <b>ON</b>
-      </button>
-      <button class="ctl" id="traceBtn" type="button" aria-pressed="true" title="切换标注（T）">
-        <span class="dot" aria-hidden="true"></span>TRACE <b>ON</b>
-      </button>
-    </div>
-  </footer>
-</div>
+        <a class="page-card" href="./mirror-2610/">
+          <span class="page-number">01</span>
+          <span class="page-main">
+            <span class="page-kicker">Mirror.js / WebGL + SVG</span>
+            <h3>MIRROR / 2610</h3>
+            <p>镜面场 · 自动选择 WebGL / SVG 后端的反射实验，包含 three 加载进度与兼容性检查。</p>
+          </span>
+          <span class="page-action">
+            打开
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M3 13 13 3M6 3h7v7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        </a>
+      </section>
+    </main>
 
-<svg width="0" height="0" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
-  <filter id="mirror-filter" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse"
-          x="0" y="0" width="1180" height="670" color-interpolation-filters="sRGB">
-    <feOffset id="mirror-source-offset" in="SourceGraphic" dx="0" dy="0" result="src"/>
-    <feImage id="displacement-map" x="0" y="0" width="1180" height="670"
-             preserveAspectRatio="none" result="map"/>
-    <feDisplacementMap in="src" in2="map" scale="800"
-                       xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-</svg>
+    <footer class="footer">
+      <span>Ellia / GameJam 2026</span>
+      <span>Static HTML · Material 3</span>
+    </footer>
+  </div>
 
 <script>
-(() => {
-  'use strict';
+  (() => {
+    'use strict';
 
-  document.documentElement.classList.remove('no-js');
-  const stage = document.getElementById('stage');
-  const scene = document.getElementById('scene');
-  const glass = document.getElementById('mirrorGlass');
-  const filter = document.getElementById('mirror-filter');
-  const feMap = document.getElementById('displacement-map');
-  const feWarp = filter.querySelector('feDisplacementMap');
-  const feOffset = document.getElementById('mirror-source-offset');
-  const annos = document.getElementById('annos');
-
-  const supportsBackdrop = CSS.supports('backdrop-filter', 'url(#mirror-filter)') ||
-    CSS.supports('-webkit-backdrop-filter', 'url(#mirror-filter)');
-  if (!supportsBackdrop) document.documentElement.classList.add('no-backdrop');
-
-  /* deterministic scatter -------------------------------------------------- */
-  function mulberry32(a) {
-    return function () {
-      a |= 0; a = a + 0x6D2B79F5 | 0;
-      let t = Math.imul(a ^ a >>> 15, 1 | a);
-      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    const themes = {
+      purple: { name: '紫罗兰', color: '#6750A4' },
+      teal: { name: '青绿', color: '#006A60' },
+      coral: { name: '珊瑚', color: '#8F4C38' },
+      blue: { name: '湖蓝', color: '#0061A4' }
     };
-  }
-  const NS = 'http://www.w3.org/2000/svg';
-  const rnd = mulberry32(20261026);
+    const root = document.documentElement;
+    const buttons = [...document.querySelectorAll('[data-theme-choice]')];
+    const themeName = document.getElementById('themeName');
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
 
-  function addStars() {
-    const g = document.getElementById('stars');
-    if (!g || g.childNodes.length) return;
-    for (let i = 0; i < 176; i++) {
-      const x = rnd() * 792 + 4;
-      const y = Math.pow(rnd(), 1.28) * 288 + 2;
-      const r = .35 + Math.pow(rnd(), 2.2) * 1.45;
-      const c = document.createElementNS(NS, 'circle');
-      c.setAttribute('cx', x.toFixed(2));
-      c.setAttribute('cy', y.toFixed(2));
-      c.setAttribute('r', r.toFixed(2));
-      c.setAttribute('fill', rnd() > .2 ? '#efe5cb' : '#c3d5c5');
-      c.setAttribute('opacity', (.08 + rnd() * .56).toFixed(2));
-      g.appendChild(c);
-    }
-    // clusters at the edges keep the mirrored bands alive
-    [[76, 58, 22], [722, 80, 26], [154, 172, 18], [662, 206, 14]].forEach(([cx, cy, spread]) => {
-      for (let i = 0; i < spread; i++) {
-        const c = document.createElementNS(NS, 'circle');
-        c.setAttribute('cx', (cx + (rnd() - .5) * spread * 3.2).toFixed(2));
-        c.setAttribute('cy', Math.max(2, cy + (rnd() - .5) * spread * 2.4).toFixed(2));
-        c.setAttribute('r', (.35 + rnd() * .8).toFixed(2));
-        c.setAttribute('fill', '#e9dfc6');
-        c.setAttribute('opacity', (.1 + rnd() * .4).toFixed(2));
-        g.appendChild(c);
-      }
-    });
-    // a few brighter cross stars
-    [[118, 96], [672, 132], [287, 184], [558, 72], [76, 56], [732, 92]].forEach(([x, y], i) => {
-      const star = document.createElementNS(NS, 'g');
-      star.setAttribute('opacity', i < 3 ? .58 : .4);
-      const cross = document.createElementNS(NS, 'path');
-      cross.setAttribute('d', `M${x - 5} ${y}H${x + 5}M${x} ${y - 5}V${y + 5}`);
-      cross.setAttribute('stroke', '#efe4c8');
-      cross.setAttribute('stroke-width', '.55');
-      star.appendChild(cross);
-      const dot = document.createElementNS(NS, 'circle');
-      dot.setAttribute('cx', x); dot.setAttribute('cy', y); dot.setAttribute('r', 1.1);
-      dot.setAttribute('fill', '#f4ead0');
-      star.appendChild(dot);
-      g.appendChild(star);
-    });
-  }
-
-  function addRipples() {
-    const g = document.getElementById('ripples');
-    if (!g || g.childNodes.length) return;
-    for (let i = 0; i < 38; i++) {
-      const y = 307 + rnd() * 132;
-      const x = 24 + rnd() * 752;
-      const w = 16 + rnd() * 150;
-      const bend = (rnd() - .5) * 2.2;
-      const p = document.createElementNS(NS, 'path');
-      p.setAttribute('d', `M${x - w / 2} ${y} q ${w * .25} ${bend} ${w * .5} 0 t ${w * .5} 0`);
-      p.setAttribute('stroke-width', (.35 + rnd() * .6).toFixed(2));
-      p.setAttribute('opacity', (.035 + rnd() * .12).toFixed(3));
-      g.appendChild(p);
-    }
-    // moonlight glitter
-    for (let i = 0; i < 18; i++) {
-      const y = 312 + i * 6.2 + rnd() * 3;
-      const w = 16 + rnd() * 78;
-      const x = 400 + (rnd() - .5) * 46;
-      const p = document.createElementNS(NS, 'path');
-      p.setAttribute('d', `M${x - w / 2} ${y} H${x + w / 2}`);
-      p.setAttribute('stroke', '#f0e2c3');
-      p.setAttribute('stroke-width', (.35 + rnd() * .55).toFixed(2));
-      p.setAttribute('opacity', (.035 + rnd() * .12).toFixed(3));
-      g.appendChild(p);
-    }
-  }
-
-  addStars();
-  addRipples();
-
-  // The whole stage sits under the mirrored glass. A crisp duplicate of the
-  // centre is composited above it, so the "real" subject stays sharp while the
-  // surrounding bands are the filtered reflection. Masking the filter itself
-  // would break the backdrop-filter sampling in Chromium.
-  function addForegroundScene() {
-    const front = scene.cloneNode(true);
-    front.removeAttribute('id');
-    front.classList.add('scene--foreground');
-    front.setAttribute('aria-hidden', 'true');
-    front.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-    // Avoid a duplicate document heading in the decorative layer.
-    front.querySelectorAll('h1').forEach(el => {
-      const d = document.createElement('div');
-      d.className = el.className;
-      d.innerHTML = el.innerHTML;
-      el.replaceWith(d);
-    });
-    glass.after(front);
-  }
-  addForegroundScene();
-
-  /* displacement map ------------------------------------------------------- */
-  let raf = 0, lastKey = '';
-
-  function buildMap() {
-    if (!supportsBackdrop) return;
-    const s = stage.getBoundingClientRect();
-    const a = scene.getBoundingClientRect();
-    const W = Math.max(1, Math.round(s.width));
-    const H = Math.max(1, Math.round(s.height));
-    // The filter is rasterised in device pixels; the map must match that
-    // raster instead of the CSS-pixel layout, especially at 125–200% OS/UI
-    // scaling. A 5 MP budget keeps resizing responsive on high-DPI displays.
-    const rawDpr = Math.max(1, window.devicePixelRatio || 1);
-    const dpr = Math.max(1, Math.min(rawDpr, 3, Math.sqrt(5_000_000 / (W * H))));
-    const mapW = Math.max(1, Math.round(W * dpr));
-    const mapH = Math.max(1, Math.round(H * dpr));
-    const mapScaleX = mapW / W;
-    const mapScaleY = mapH / H;
-    const key = [W, H, dpr, a.left - s.left, a.top - s.top, a.width, a.height]
-      .map(v => Math.round(v * 10) / 10).join('|');
-    if (key === lastKey) return;
-    lastKey = key;
-
-    const ax0 = a.left - s.left;
-    const ay0 = a.top - s.top;
-    const ax1 = ax0 + a.width;
-    const ay1 = ay0 + a.height;
-
-    // Max distance the map will ever need to pull from the centre.
-    const maxDX = Math.max(ax0, W - ax1, 0);
-    const maxDY = Math.max(ay0, H - ay1, 0);
-    const ripple = .9;
-    const pad = ripple + 1.1;
-    const maxD = Math.max(maxDX * 2, maxDY * 2) + pad;
-    const scale = 2 * maxD;
-
-    const cv = document.createElement('canvas');
-    cv.width = mapW;
-    cv.height = mapH;
-    const ctx = cv.getContext('2d', { willReadFrequently: true });
-    const img = ctx.createImageData(mapW, mapH);
-    const data = img.data;
-
-    const dxs = new Float32Array(mapW);
-    const dys = new Float32Array(mapH);
-    for (let x = 0; x < mapW; x++) {
-      const px = (x + .5) / mapScaleX;
-      dxs[x] = px < ax0 ? 2 * (ax0 - px) : px > ax1 ? 2 * (ax1 - px) : 0;
-    }
-    for (let y = 0; y < mapH; y++) {
-      const py = (y + .5) / mapScaleY;
-      dys[y] = py < ay0 ? 2 * (ay0 - py) : py > ay1 ? 2 * (ay1 - py) : 0;
-    }
-
-    for (let y = 0; y < mapH; y++) {
-      const py = (y + .5) / mapScaleY;
-      const depthY = py < ay0 ? (ay0 - py) / Math.max(1, ay0) : py > ay1 ? (py - ay1) / Math.max(1, H - ay1) : 0;
-      const sinY = Math.sin(py * .053 + 1.9);
-      const baseY = dys[y];
-      for (let x = 0; x < mapW; x++) {
-        const px = (x + .5) / mapScaleX;
-        const depthX = px < ax0 ? (ax0 - px) / Math.max(1, ax0) : px > ax1 ? (px - ax1) / Math.max(1, W - ax1) : 0;
-        const depth = Math.max(depthX, depthY);
-        const dx = dxs[x] + ripple * depth * Math.sin(py * .047 + px * .019);
-        const dy = baseY + ripple * depth * Math.sin(px * .043 + sinY);
-        const i = (y * mapW + x) * 4;
-        let r = Math.round((.5 + dx / scale) * 255);
-        let g = Math.round((.5 + dy / scale) * 255);
-        r = r < 0 ? 0 : r > 255 ? 255 : r;
-        g = g < 0 ? 0 : g > 255 ? 255 : g;
-        data[i] = r;
-        data[i + 1] = g;
-        data[i + 2] = 0;
-        data[i + 3] = 255;
+    function setTheme(key, persist = true) {
+      if (!themes[key]) key = 'purple';
+      root.dataset.theme = key;
+      buttons.forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.themeChoice === key));
+      });
+      if (themeName) themeName.textContent = themes[key].name;
+      if (themeMeta) themeMeta.content = themes[key].color;
+      if (persist) {
+        try { localStorage.setItem('ellia-theme', key); } catch {}
       }
     }
-    ctx.putImageData(img, 0, 0);
 
-    // Zero displacement is encoded as 128/255, not exactly 0.5 of the channel
-    // range. feOffset shifts the source by +bias first, so the centre and the
-    // seam do not drift by ~1.5 CSS px.
-    const bias = (128 / 255 - .5) * scale;
-    feOffset.setAttribute('dx', bias.toFixed(3));
-    feOffset.setAttribute('dy', bias.toFixed(3));
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => setTheme(button.dataset.themeChoice));
+    });
 
-    feMap.setAttribute('href', cv.toDataURL('image/png'));
-    feMap.setAttribute('width', String(W));
-    feMap.setAttribute('height', String(H));
-    filter.setAttribute('width', String(W));
-    filter.setAttribute('height', String(H));
-    feWarp.setAttribute('scale', scale.toFixed(2));
-  }
+    document.getElementById('randomTheme')?.addEventListener('click', () => {
+      const keys = Object.keys(themes);
+      const current = root.dataset.theme || 'purple';
+      let next = keys[Math.floor(Math.random() * keys.length)];
+      if (keys.length > 1 && next === current) {
+        next = keys[(keys.indexOf(current) + 1) % keys.length];
+      }
+      setTheme(next);
+    });
 
-  function schedule() {
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(buildMap);
-  }
-
-  if ('ResizeObserver' in window) {
-    const ro = new ResizeObserver(schedule);
-    ro.observe(stage);
-  }
-  window.addEventListener('resize', schedule, { passive: true });
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
-  schedule();
-
-  /* controls --------------------------------------------------------------- */
-  const mirrorBtn = document.getElementById('mirrorBtn');
-  const traceBtn = document.getElementById('traceBtn');
-  let mirrorOn = true;
-  let traceOn = true;
-
-  function setMirror(on) {
-    mirrorOn = on;
-    document.body.classList.toggle('mirror-off', !on);
-    mirrorBtn.setAttribute('aria-pressed', String(on));
-    mirrorBtn.querySelector('b').textContent = on ? 'ON' : 'OFF';
-  }
-  function setTrace(on) {
-    traceOn = on;
-    document.body.classList.toggle('trace-off', !on);
-    traceBtn.setAttribute('aria-pressed', String(on));
-    traceBtn.querySelector('b').textContent = on ? 'ON' : 'OFF';
-  }
-  mirrorBtn.addEventListener('click', () => setMirror(!mirrorOn));
-  traceBtn.addEventListener('click', () => setTrace(!traceOn));
-  window.addEventListener('keydown', (e) => {
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
-    const k = e.key.toLowerCase();
-    if (k === 'm') setMirror(!mirrorOn);
-    if (k === 't') setTrace(!traceOn);
-  });
-
-  // expose a tiny debug handle for visual experiments
-  window.__mirrorField = { buildMap, stage, scene, filter };
-})();
+    setTheme(root.dataset.theme || 'purple', false);
+  })();
 </script>
 </body>
 </html>

@@ -2,7 +2,7 @@ import json
 
 from playwright.sync_api import sync_playwright
 
-URL = "http://127.0.0.1:4173/mirror-lab.html"
+URL = "http://127.0.0.1:4173/mirror-2610/mirror-lab.html"
 FLAGS = ["--enable-features=CanvasDrawElement"]
 errors = []
 
@@ -200,7 +200,7 @@ with sync_playwright() as p:
 
     # Invalid interval is rejected at creation.
     invalid = page.evaluate("""async () => {
-      const { createMirror } = await import('./js/mirror.js');
+      const { createMirror } = await import('../js/effects/mirror.js');
       const container = document.createElement('div');
       const content = document.createElement('div');
       container.style.cssText = 'width:100px;height:100px';
