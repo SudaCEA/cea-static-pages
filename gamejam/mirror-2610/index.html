@@ -300,9 +300,10 @@
     transform-origin:center;
     transition:
       top .72s cubic-bezier(.76,0,.24,1),
+      left .72s cubic-bezier(.76,0,.24,1),
       height .72s cubic-bezier(.76,0,.24,1),
       transform .72s cubic-bezier(.76,0,.24,1);
-    will-change:top,height,transform;
+    will-change:top,left,height,transform;
   }
   .art[data-rule-mode="cross"] .sheet-rule{
     top:50%;
@@ -312,6 +313,13 @@
   .art[data-rule-mode="cross"] .sheet-rule-b{
     transform:translate(-50%,-50%) rotate(90deg);
   }
+  .art[data-rule-mode="rank"] .sheet-rule{
+    top:50%;
+    height:3px;
+    transform:translate(-50%,-50%) rotate(90deg);
+  }
+  .art[data-rule-mode="rank"] .sheet-rule-a{left:20%}
+  .art[data-rule-mode="rank"] .sheet-rule-b{left:80%}
 
   /* A light-grey ring around the native cursor on every slide. It is a
      direct child of the deck and sits below every slide, so the quadrant
@@ -399,6 +407,121 @@
     letter-spacing:-.05em;
     color:#0a0a0a;
     will-change:transform;
+  }
+
+  /* Ranking page: two vertical sheet rules frame a scrolling list. */
+  .slide-rank{
+    padding:0;
+    overflow:visible;
+  }
+  .rank-layout{
+    display:grid;
+    grid-template-columns:20% 60% 20%;
+    width:100%;
+    height:100%;
+    min-height:0;
+  }
+  .rank-side{
+    display:grid;
+    place-items:center;
+    min-width:0;
+    min-height:0;
+    padding:clamp(14px,2.4cqw,30px);
+  }
+  .rank-side-left{grid-column:1;grid-row:1}
+  .rank-board{grid-column:2;grid-row:1}
+  .rank-side-right{grid-column:3;grid-row:1}
+  .rank-side-title{
+    margin:0;
+    writing-mode:vertical-rl;
+    text-orientation:mixed;
+    font:600 clamp(28px,4.3cqw,62px)/1 var(--serif);
+    letter-spacing:.06em;
+    white-space:nowrap;
+  }
+  .rank-side-left .rank-side-title{
+    text-orientation:upright;
+    letter-spacing:.16em;
+  }
+  .rank-board{
+    height:100%;
+    min-width:0;
+    min-height:0;
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    margin-inline:clamp(6px,1vw,14px);
+    padding:clamp(18px,4.2cqh,40px) clamp(26px,2.2cqw,36px);
+    scrollbar-color:#0a0a0a transparent;
+    scrollbar-width:thin;
+    outline:none;
+  }
+  .rank-board::-webkit-scrollbar{width:3px}
+  .rank-board::-webkit-scrollbar-track{background:transparent}
+  .rank-board::-webkit-scrollbar-thumb{background:#0a0a0a}
+  .rank-board:focus-visible{outline:1px solid #0a0a0a;outline-offset:-1px}
+  .rank-list{
+    display:grid;
+    gap:clamp(9px,1.5cqh,14px);
+    margin:0;
+    padding:0;
+    list-style:none;
+  }
+  .rank-card{
+    position:relative;
+    z-index:0;
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;
+    gap:clamp(9px,1.2cqw,16px);
+    min-height:clamp(76px,12.4cqh,112px);
+    padding:clamp(12px,1.8cqh,18px) clamp(14px,1.8cqw,24px);
+    border:1px solid #0a0a0a;
+    background:transparent;
+    scale:1;
+    transform-origin:center;
+    transition:scale .22s ease,box-shadow .22s ease;
+  }
+  @media (hover:hover) and (pointer:fine){
+    .rank-card:hover{
+      z-index:2;
+      scale:1.035;
+      box-shadow:0 0 0 1px #0a0a0a;
+    }
+  }
+  .rank-number{
+    align-self:start;
+    padding-top:.2em;
+    color:rgba(10,10,10,.5);
+    font:400 clamp(8px,.75cqw,10px)/1 var(--mono);
+    letter-spacing:.1em;
+    font-variant-numeric:tabular-nums;
+  }
+  .rank-copy{
+    display:grid;
+    gap:5px;
+    min-width:0;
+  }
+  .rank-team{
+    overflow:hidden;
+    font:600 clamp(18px,2cqw,30px)/1.05 var(--serif);
+    letter-spacing:-.02em;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .rank-members{
+    overflow:hidden;
+    color:rgba(10,10,10,.56);
+    font:400 clamp(9px,.82cqw,11px)/1.3 var(--mono);
+    letter-spacing:.08em;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .rank-score{
+    align-self:end;
+    font:500 clamp(16px,1.7cqw,24px)/1 var(--serif);
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
   }
 
   .slide-foot{
@@ -586,6 +709,16 @@
       font-size:clamp(60px,21cqw,96px);
     }
     .quadrant-stage{--quad-pointer-size:clamp(30px,10cqw,44px)}
+    .slide-rank{padding:0}
+    .art[data-rule-mode="rank"] .sheet-rule-a{left:4%}
+    .art[data-rule-mode="rank"] .sheet-rule-b{left:96%}
+    .rank-layout{grid-template-columns:4% 92% 4%}
+    .rank-side{display:none}
+    .rank-board{margin-inline:6px;padding:14px 14px}
+    .rank-card{min-height:68px;padding:10px 12px}
+    .rank-team{font-size:17px}
+    .rank-members{font-size:8px}
+    .rank-score{font-size:16px}
     .info-grid{grid-template-columns:1fr}
     .split{
       grid-template-columns:1fr;
@@ -627,6 +760,7 @@
   @media (prefers-reduced-motion:reduce){
     .deck-button{transition-duration:.01ms}
     .sheet-rule{transition-duration:.01ms}
+    .structure-veil{transition:none}
     .quadrant-pointer,
     .quadrant-title,
     .quadrant-detail{transition-duration:.01ms}
@@ -786,6 +920,164 @@
   .tuner select:focus-visible{
     outline:2px solid var(--red);
     outline-offset:2px;
+  }
+
+  /* Full-screen structure diagram, pulsed by the mirror's resize event.
+     The four hatched regions are the mirror bands around the content. */
+  .structure-veil{
+    position:fixed;
+    inset:0;
+    z-index:78;
+    overflow:hidden;
+    background:#ffffff;
+    color:#0a0a0a;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transition:opacity .5s ease,visibility 0s linear .5s;
+    --content-x:14%;
+    --content-y:14%;
+    --content-w:72%;
+    --content-h:72%;
+  }
+  .structure-veil.is-visible{
+    opacity:1;
+    visibility:visible;
+    transition:opacity .5s ease,visibility 0s;
+  }
+  .structure-veil-frame{
+    position:absolute;
+    inset:0;
+    border:1px solid #0a0a0a;
+  }
+  .structure-veil-region{
+    position:absolute;
+    display:grid;
+    place-items:center;
+    color:rgba(10,10,10,.3);
+    font:400 clamp(9px,.85vw,12px)/1.2 var(--serif);
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  .structure-veil-region-top{
+    top:0;
+    right:0;
+    left:0;
+    height:var(--content-y);
+    border-bottom:1px solid #0a0a0a;
+  }
+  .structure-veil-region-bottom{
+    top:calc(var(--content-y) + var(--content-h));
+    right:0;
+    bottom:0;
+    left:0;
+    border-top:1px solid #0a0a0a;
+  }
+  .structure-veil-region-left{
+    top:var(--content-y);
+    left:0;
+    width:var(--content-x);
+    height:var(--content-h);
+    border-right:1px solid #0a0a0a;
+  }
+  .structure-veil-region-right{
+    top:var(--content-y);
+    left:calc(var(--content-x) + var(--content-w));
+    right:0;
+    height:var(--content-h);
+    border-left:1px solid #0a0a0a;
+  }
+  .structure-veil-region-left span{
+    transform:rotate(-90deg);
+    white-space:nowrap;
+  }
+  .structure-veil-region-right span{
+    transform:rotate(90deg);
+    white-space:nowrap;
+  }
+  .structure-veil-content{
+    position:absolute;
+    top:var(--content-y);
+    left:var(--content-x);
+    width:var(--content-w);
+    height:var(--content-h);
+  }
+  .structure-veil-content-label{
+    position:absolute;
+    bottom:10px;
+    left:12px;
+    color:rgba(10,10,10,.3);
+    font:400 clamp(9px,.85vw,12px)/1.2 var(--serif);
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  .structure-veil-measure{
+    position:absolute;
+    background:#0a0a0a;
+  }
+  .structure-veil-measure-top{
+    top:-28px;
+    right:0;
+    left:0;
+    height:1px;
+  }
+  .structure-veil-measure-top::before,
+  .structure-veil-measure-top::after{
+    position:absolute;
+    top:-5px;
+    width:1px;
+    height:11px;
+    background:#0a0a0a;
+    content:"";
+  }
+  .structure-veil-measure-top::before{left:0}
+  .structure-veil-measure-top::after{right:0}
+  .structure-veil-measure-left{
+    top:0;
+    bottom:0;
+    left:-28px;
+    width:1px;
+  }
+  .structure-veil-measure-left::before,
+  .structure-veil-measure-left::after{
+    position:absolute;
+    left:-5px;
+    width:11px;
+    height:1px;
+    background:#0a0a0a;
+    content:"";
+  }
+  .structure-veil-measure-left::before{top:0}
+  .structure-veil-measure-left::after{bottom:0}
+  .structure-veil-measure span{
+    position:absolute;
+    top:50%;
+    left:50%;
+    padding:0 8px;
+    background:#ffffff;
+    font:400 clamp(11px,.9vw,14px)/1 var(--serif);
+    letter-spacing:.06em;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+    transform:translate(-50%,-50%);
+  }
+  .structure-veil-measure-left span{
+    transform:translate(-50%,-50%) rotate(-90deg);
+  }
+  .structure-veil-resizing{
+    position:absolute;
+    right:clamp(18px,3vw,44px);
+    bottom:clamp(14px,2.4vw,30px);
+    font:400 italic clamp(14px,1.5vw,20px)/1 var(--serif);
+    letter-spacing:.02em;
+  }
+  @media (max-width:700px){
+    .structure-veil-region{font-size:8px;letter-spacing:.1em}
+    .structure-veil-region-left{place-items:center start;padding-left:8px}
+    .structure-veil-region-right{place-items:center end;padding-right:8px}
+    .structure-veil-measure-top{top:-22px}
+    .structure-veil-measure-left{left:-22px}
+    .structure-veil-resizing{font-size:15px}
   }
 
   /* Boot progress and the preflight question share one full-screen layer. */
@@ -1065,37 +1357,78 @@
           </div>
         </section>
 
-        <section class="slide" data-slide="2" aria-roledescription="slide" aria-label="机制" aria-hidden="true">
-          <div class="slide-inner">
-            <header class="slide-kicker" data-fade data-fade-in-delay="0" data-fade-out-delay="60">
-              <span class="micro">02 / Mechanism</span>
-              <span class="micro">移动与停留</span>
-            </header>
-            <div class="slide-content">
-              <h2 class="headline" data-fade data-fade-in-delay="40" data-fade-out-delay="45">移动，等待，辨认。</h2>
-              <p class="body-copy" data-fade data-fade-in-delay="100" data-fade-out-delay="30">镜像不会立刻回应。每一次移动都会留下短暂的延迟，等静止之后，画面才慢慢追上你的位置。</p>
-              <div class="steps">
-                <article class="step" data-fade data-fade-in-delay="140" data-fade-out-delay="50">
-                  <span class="micro">01</span>
-                  <h3>移动</h3>
-                  <p>让指针改变反射的重心。</p>
-                </article>
-                <article class="step" data-fade data-fade-in-delay="180" data-fade-out-delay="35">
-                  <span class="micro">02</span>
-                  <h3>等待</h3>
-                  <p>给延迟一点时间，让图像抵达。</p>
-                </article>
-                <article class="step" data-fade data-fade-in-delay="220" data-fade-out-delay="20">
-                  <span class="micro">03</span>
-                  <h3>辨认</h3>
-                  <p>在失真的表面里，找一个稳定的点。</p>
-                </article>
-              </div>
+        <section class="slide slide-rank" data-slide="2" aria-roledescription="slide" aria-label="评分结果" aria-hidden="true">
+          <div class="rank-layout">
+            <aside class="rank-side rank-side-left">
+              <h2 class="rank-side-title" data-fade data-fade-in-delay="0" data-fade-out-delay="60">评分结果</h2>
+            </aside>
+            <div class="rank-board" data-parallax="0.18" data-fade data-fade-in-delay="45" data-fade-out-delay="35" tabindex="0" aria-label="队伍排行榜">
+              <ol class="rank-list">
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">01</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 01</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">02</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 02</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">03</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 03</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">04</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 04</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">05</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 05</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">06</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 06</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">07</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 07</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">08</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 08</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">09</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 09</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">10</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 10</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">11</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 11</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+                <li class="rank-card" data-parallax="0.28">
+                  <span class="rank-number">12</span>
+                  <span class="rank-copy"><strong class="rank-team">TEAM 12</strong><span class="rank-members">成员 A / B / C</span></span>
+                  <span class="rank-score">00.0</span>
+                </li>
+              </ol>
             </div>
-            <footer class="slide-foot" data-fade data-fade-in-delay="260" data-fade-out-delay="0">
-              <span class="micro">Move / Wait / Read</span>
-              <span class="micro">02 — 04</span>
-            </footer>
+            <aside class="rank-side rank-side-right">
+              <h2 class="rank-side-title" data-fade data-fade-in-delay="90" data-fade-out-delay="20">Rank list</h2>
+            </aside>
           </div>
         </section>
 
@@ -1196,6 +1529,24 @@
     </div>
   </aside>
 
+  <div class="structure-veil" id="structureVeil" aria-hidden="true">
+    <div class="structure-veil-frame"></div>
+    <div class="structure-veil-region structure-veil-region-top"><span>Top / Reflection</span></div>
+    <div class="structure-veil-region structure-veil-region-left"><span>Left / Reflection</span></div>
+    <div class="structure-veil-region structure-veil-region-right"><span>Right / Reflection</span></div>
+    <div class="structure-veil-region structure-veil-region-bottom"><span>Bottom / Reflection</span></div>
+    <div class="structure-veil-content" id="structureContent">
+      <div class="structure-veil-measure structure-veil-measure-top">
+        <span id="structureWidth">123px</span>
+      </div>
+      <div class="structure-veil-measure structure-veil-measure-left">
+        <span id="structureHeight">123px</span>
+      </div>
+      <span class="structure-veil-content-label">Content</span>
+    </div>
+    <span class="structure-veil-resizing">resizing...</span>
+  </div>
+
   <div class="boot" id="boot">
     <div class="boot-inner">
       <div class="boot-progress" role="status" aria-live="polite">
@@ -1235,6 +1586,9 @@
   const quadrantStage = document.getElementById('quadrantStage');
   const quadrantPointer = document.getElementById('quadrantPointer');
   const quadrantSlides = [...document.querySelectorAll('#deck .slide-quadrants')];
+  const structureVeil = document.getElementById('structureVeil');
+  const structureWidth = document.getElementById('structureWidth');
+  const structureHeight = document.getElementById('structureHeight');
   const boot = document.getElementById('boot');
   const bootStatus = document.getElementById('bootStatus');
   const bootPercent = document.getElementById('bootPercent');
@@ -1283,9 +1637,11 @@
     maxMR: '1920x1080'
   });
   const DECK_FADE_DURATION = 220;
+  const STRUCTURE_VEIL_HOLD_MS = 950;
   const DECK_WHEEL_THRESHOLD = 36;
   const DECK_WHEEL_LOCK_MS = 850;
   const QUADRANT_SLIDE = 1;
+  const RANK_SLIDE = 2;
   const QUADRANT_RING_MIN_SIZE = 34;
   const QUADRANT_RING_MAX_SIZE = 82;
   const QUADRANT_RING_MAX_STROKE = 5.5;
@@ -1296,6 +1652,10 @@
   const PARALLAX_MAX_SHIFT = 24;
   const PARALLAX_SMOOTHING = 9;
 
+  let structureVeilTimer = 0;
+  let structureVeilRaf = 0;
+  let structureVeilResizing = false;
+  let structureVeilArmed = false;
   let slideIndex = 0;
   let deckLocked = false;
   let deckWheelAccum = 0;
@@ -1303,6 +1663,68 @@
   let deckWheelLockedUntil = 0;
   let parallax = null;
   let quadrantPage = null;
+  let rankPage = null;
+
+  function updateStructureVeil(resizeDetail = null) {
+    if (!structureVeil || !structureWidth || !structureHeight) return;
+    const preview = resizeDetail && mirror?.previewLayout
+      ? mirror.previewLayout(resizeDetail.width, resizeDetail.height)
+      : null;
+    const rect = art.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    const content = preview
+      ? {
+        x: stageRect.left + preview.ax,
+        y: stageRect.top + preview.ay,
+        width: preview.aw,
+        height: preview.ah
+      }
+      : {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height
+      };
+    structureVeil.style.setProperty('--content-x', `${content.x}px`);
+    structureVeil.style.setProperty('--content-y', `${content.y}px`);
+    structureVeil.style.setProperty('--content-w', `${content.width}px`);
+    structureVeil.style.setProperty('--content-h', `${content.height}px`);
+    structureWidth.textContent = `${Math.round(content.width)}px`;
+    structureHeight.textContent = `${Math.round(content.height)}px`;
+  }
+
+  function tickStructureVeilMeasurements() {
+    structureVeilRaf = 0;
+    if (!structureVeilArmed || !structureVeilResizing) return;
+    updateStructureVeil({
+      width: stage.clientWidth,
+      height: stage.clientHeight
+    });
+    structureVeilRaf = requestAnimationFrame(tickStructureVeilMeasurements);
+  }
+
+  function showStructureVeil(event) {
+    if (!structureVeilArmed || !structureVeil) return;
+    structureVeilResizing = true;
+    updateStructureVeil(event?.detail || null);
+    clearTimeout(structureVeilTimer);
+    structureVeil.classList.add('is-visible');
+    if (!structureVeilRaf) {
+      structureVeilRaf = requestAnimationFrame(tickStructureVeilMeasurements);
+    }
+  }
+
+  function hideStructureVeilSoon() {
+    if (!structureVeilArmed || !structureVeil) return;
+    structureVeilResizing = false;
+    if (structureVeilRaf) cancelAnimationFrame(structureVeilRaf);
+    structureVeilRaf = 0;
+    updateStructureVeil();
+    clearTimeout(structureVeilTimer);
+    structureVeilTimer = setTimeout(() => {
+      structureVeil.classList.remove('is-visible');
+    }, STRUCTURE_VEIL_HOLD_MS);
+  }
 
   function clampNumber(value, min, max, fallback) {
     const number = Number(value);
@@ -1359,7 +1781,13 @@
   }
 
   function syncRuleMode(index = slideIndex) {
-    art.dataset.ruleMode = index >= QUADRANT_SLIDE ? 'cross' : 'bar';
+    if (index === 0) {
+      art.dataset.ruleMode = 'bar';
+    } else if (index === RANK_SLIDE) {
+      art.dataset.ruleMode = 'rank';
+    } else {
+      art.dataset.ruleMode = 'cross';
+    }
   }
 
   function goToSlide(index) {
@@ -1379,6 +1807,7 @@
     const incoming = slides[index];
     const reduce = reducedMotion();
     if (slideIndex === QUADRANT_SLIDE) quadrantPage?.deactivate();
+    if (slideIndex === RANK_SLIDE) rankPage?.deactivate();
     outgoing.setAttribute('aria-hidden', 'true');
 
     fadeOut(outgoing, {
@@ -1410,9 +1839,26 @@
     return true;
   }
 
+  function rankBoardAtPointer(event) {
+    if (slideIndex !== RANK_SLIDE || !rankPage) return null;
+    const rect = art.getBoundingClientRect();
+    const narrow = window.matchMedia?.('(max-width:700px)').matches === true;
+    const left = narrow ? 0.04 : 0.2;
+    const right = narrow ? 0.96 : 0.8;
+    const x0 = rect.left + rect.width * left - 2;
+    const x1 = rect.left + rect.width * right + 2;
+    const inside =
+      event.clientX >= x0 &&
+      event.clientX <= x1 &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom;
+    return inside ? rankPage.board : null;
+  }
+
   function onDeckWheel(event) {
     if (event.defaultPrevented) return;
-    if (event.target instanceof Element && event.target.closest('.tuner')) {
+    if (event.target instanceof Element &&
+        event.target.closest('.tuner, .rank-board')) {
       return;
     }
     const unit = event.deltaMode === 1
@@ -1422,6 +1868,14 @@
         : 1;
     const delta = event.deltaY * unit;
     if (!delta) return;
+
+    const rankBoard = rankBoardAtPointer(event);
+    if (rankBoard) {
+      rankBoard.scrollTop += delta;
+      event.preventDefault();
+      return;
+    }
+
     event.preventDefault();
 
     const now = performance.now();
@@ -1445,7 +1899,8 @@
     if (
       target instanceof HTMLElement &&
       (target.isContentEditable ||
-        /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName))
+        /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName) ||
+        target.closest('.rank-board'))
     ) {
       return;
     }
@@ -1535,7 +1990,7 @@
     parallax = createParallax(art, {
       maxShiftPx,
       smoothing: PARALLAX_SMOOTHING,
-      selector: '#deck .slide-quadrants [data-parallax]'
+      selector: '#deck .slide-quadrants [data-parallax], #deck .slide-rank [data-parallax]'
     });
 
     function setHover(next) {
@@ -1853,8 +2308,198 @@
     return api;
   }
 
+  function initRankPage() {
+    const board = document.querySelector('#deck .slide-rank .rank-board');
+    const cards = [...document.querySelectorAll('#deck .slide-rank .rank-card')];
+    if (!board || !cards.length) return null;
+
+    const baseDepth = 0.28;
+    const hoverDepth = 0.68;
+    let hovered = null;
+
+    function setDepth(card, depth) {
+      const value = String(depth);
+      if (card.dataset.parallax === value) return;
+      card.dataset.parallax = value;
+      parallax?.refresh();
+    }
+
+    function activate(card) {
+      if (hovered === card) return;
+      hovered = card;
+      setDepth(card, hoverDepth);
+    }
+
+    function deactivate(card = hovered) {
+      if (!card || hovered !== card) return;
+      hovered = null;
+      setDepth(card, baseDepth);
+    }
+
+    function reset() {
+      stopScrollAnimation();
+      hovered = null;
+      let changed = false;
+      for (const card of cards) {
+        if (card.dataset.parallax !== String(baseDepth)) {
+          card.dataset.parallax = String(baseDepth);
+          changed = true;
+        }
+      }
+      if (changed) parallax?.refresh();
+    }
+
+    for (const card of cards) {
+      card.addEventListener('pointerenter', (event) => {
+        if (event.pointerType && event.pointerType !== 'mouse') return;
+        activate(card);
+      });
+      card.addEventListener('pointerleave', (event) => {
+        if (event.pointerType && event.pointerType !== 'mouse') return;
+        deactivate(card);
+      });
+    }
+
+    // Keep wheel events inside the scroller; the window-level deck handler
+    // must never see them as a page-navigation gesture.
+    board.addEventListener('wheel', (event) => {
+      event.stopPropagation();
+    }, { passive: true });
+
+    const scrollState = {
+      target: board.scrollTop,
+      raf: 0,
+      lastNow: 0,
+      lastApplied: board.scrollTop
+    };
+    const scrollMedia = window.matchMedia?.('(prefers-reduced-motion: reduce)') || null;
+    const SCROLL_SMOOTHING = 14;
+    const SCROLL_SNAP = 1.5;
+
+    function scrollLimit() {
+      return Math.max(0, board.scrollHeight - board.clientHeight);
+    }
+
+    function stopScrollAnimation() {
+      if (scrollState.raf) cancelAnimationFrame(scrollState.raf);
+      scrollState.raf = 0;
+      scrollState.lastNow = 0;
+      scrollState.target = board.scrollTop;
+      scrollState.lastApplied = board.scrollTop;
+    }
+
+    function scrollFrame(now) {
+      scrollState.raf = 0;
+      const limit = scrollLimit();
+      scrollState.target = Math.min(limit, Math.max(0, scrollState.target));
+      const dt = scrollState.lastNow > 0
+        ? Math.min(0.05, Math.max(0, (now - scrollState.lastNow) / 1000))
+        : 0;
+      scrollState.lastNow = now;
+      const current = board.scrollTop;
+      if (Math.abs(scrollState.target - current) <= SCROLL_SNAP) {
+        board.scrollTop = scrollState.target;
+        scrollState.lastApplied = board.scrollTop;
+        scrollState.lastNow = 0;
+        return;
+      }
+      const amount = 1 - Math.exp(
+        -Math.max(0.0001, dt) * SCROLL_SMOOTHING
+      );
+      let next = current + (scrollState.target - current) * amount;
+      if (Math.abs(scrollState.target - next) < SCROLL_SNAP) {
+        next = scrollState.target;
+      }
+      board.scrollTop = next;
+      scrollState.lastApplied = board.scrollTop;
+
+      if (Math.abs(scrollState.target - board.scrollTop) > 0.5) {
+        scrollState.raf = requestAnimationFrame(scrollFrame);
+      } else {
+        scrollState.lastNow = 0;
+      }
+    }
+
+    function scrollByWheel(delta) {
+      const limit = scrollLimit();
+      if (!delta || limit <= 0) return;
+      if (scrollState.raf === 0 &&
+          Math.abs(board.scrollTop - scrollState.target) > 1) {
+        scrollState.target = board.scrollTop;
+      }
+      scrollState.target = Math.min(limit, Math.max(0, scrollState.target + delta));
+      if (scrollMedia?.matches) {
+        if (scrollState.raf) cancelAnimationFrame(scrollState.raf);
+        scrollState.raf = 0;
+        scrollState.lastNow = 0;
+        board.scrollTop = scrollState.target;
+        scrollState.lastApplied = board.scrollTop;
+        return;
+      }
+      if (scrollState.raf) return;
+      scrollState.lastNow = 0;
+      scrollState.raf = requestAnimationFrame(scrollFrame);
+    }
+
+    // A native scroll (scrollbar drag, keyboard, touch) must be able to
+    // interrupt the interpolation and re-seed the target.
+    board.addEventListener('scroll', () => {
+      // Programmatic writes from the rAF loop are within one device pixel of
+      // lastApplied; anything larger is a native scroll and wins.
+      if (Math.abs(board.scrollTop - scrollState.lastApplied) > 2) {
+        stopScrollAnimation();
+      }
+    }, { passive: true });
+    board.addEventListener('pointerdown', stopScrollAnimation, { passive: true });
+
+    function onRankWheel(event) {
+      if (event.ctrlKey || event.metaKey || event.defaultPrevented) return;
+      if (slideIndex !== RANK_SLIDE) return;
+      if (event.target instanceof Element &&
+          event.target.closest('.tuner, .deck-controls, .boot')) {
+        return;
+      }
+      const target = rankBoardAtPointer(event);
+      if (!target) return;
+      const unit = event.deltaMode === 1
+        ? 16
+        : event.deltaMode === 2
+          ? target.clientHeight
+          : 1;
+      const delta = event.deltaY * unit;
+      if (!delta) return;
+      scrollByWheel(delta);
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    window.addEventListener('wheel', onRankWheel, {
+      capture: true,
+      passive: false
+    });
+
+    return {
+      get board() { return board; },
+      get cards() { return [...cards]; },
+      getState: () => ({
+        hovered: hovered?.querySelector('.rank-team')?.textContent.trim() ?? null,
+        baseDepth,
+        hoverDepth,
+        depths: cards.map((card) => Number(card.dataset.parallax)),
+        scroll: {
+          top: board.scrollTop,
+          target: scrollState.target,
+          animating: scrollState.raf !== 0
+        }
+      }),
+      deactivate: reset,
+      reset
+    };
+  }
+
   quadrantPage = initQuadrantPage();
   quadrantPage?.sync();
+  rankPage = initRankPage();
 
   function applySurface() {
     const center = tuning.center;
@@ -2107,6 +2752,7 @@
     get field() { return field; },
     get parallax() { return parallax; },
     get quadrant() { return quadrantPage; },
+    get rank() { return rankPage; },
     deck: deckApi,
     get preflight() { return preflight; },
     get ready() { return mirror !== null; },
@@ -2371,7 +3017,7 @@
         mapScale: FIXED.mapScale,
         maxMR: FIXED.maxMR
       },
-      resize: { interval: 120 }
+      resize: { interval: 500 }
     };
 
     if (mode === 'webgl') {
@@ -2393,6 +3039,10 @@
 
     mirror = instance;
     instance.on('resize', updateTuneReadout);
+    instance.on('resize', () => updateStructureVeil());
+    instance.on('resizeStart', showStructureVeil);
+    instance.on('resizing', showStructureVeil);
+    instance.on('resizeEnd', hideStructureVeilSoon);
     instance.on('filter', updateTuneReadout);
     instance.on('render', updateTuneReadout);
 
@@ -2432,6 +3082,8 @@
     await wait(reduce ? 0 : BOOT_HIDE_MS);
     bootQuestion.hidden = true;
     boot.hidden = true;
+    structureVeilArmed = true;
+    updateStructureVeil();
   }
 
   async function fallbackToSvgAfterError(error, copy) {

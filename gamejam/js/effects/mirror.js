@@ -2170,6 +2170,30 @@ class Mirror extends EventTarget {
     return { ...this._filter };
   }
 
+  /**
+   * Resolve a layout for a hypothetical container size without touching the
+   * DOM or the current backend. Used by resize-time measurements while the
+   * debounced layout has not been applied yet.
+   */
+  previewLayout(width = this.container.clientWidth, height = this.container.clientHeight) {
+    const W = Number(width);
+    const H = Number(height);
+    if (!Number.isFinite(W) || !Number.isFinite(H) || W <= 0 || H <= 0) {
+      return null;
+    }
+    const naturalW = this._natural.width > 0 ? this._natural.width : W;
+    const naturalH = this._natural.height > 0 ? this._natural.height : H;
+    let aw;
+    let ah;
+    try {
+      aw = Math.min(resolveSize(this._size.width, W, naturalW), 100_000);
+      ah = Math.min(resolveSize(this._size.height, H, naturalH), 100_000);
+    } catch {
+      return null;
+    }
+    return makeLayout(W, H, aw, ah, this._dpr);
+  }
+
   getState() {
     const map = this._backend?.getMapInfo?.() || null;
     const mapDetail = this._backend?.getMapDetail?.() || null;

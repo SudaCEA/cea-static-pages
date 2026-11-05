@@ -203,6 +203,40 @@ The build SHALL include the directory page, both `mirror-2610` pages, shared eff
 - **AND** `dist/gamejam/` contains the root index, both mirror-2610 pages, `js/effects/`, and `libs/three/`
 - **AND** it contains no `tools/`, `page.toml`, `build.py`, or `libs/three/src/` paths
 
+### Requirement: Resize structure veil
+
+The page SHALL provide a non-interactive full-screen veil outside the mirrored content, above the deck controls and below the boot layer. It SHALL fade in on the mirror's `resizeStart`, stay visible through `resizing`, and fade out after `resizeEnd`. The mirror resize debounce SHALL be 500ms. Programmatic `resize` emissions SHALL only update measurements, not show the veil.
+
+#### Scenario: Initial state
+
+- **WHEN** the page finishes loading
+- **THEN** the structure veil is hidden and the mirror is unchanged
+- **AND** the veil is outside the mirrored content
+
+#### Scenario: Resize pulse
+
+- **WHEN** the mirror emits `resizeStart`
+- **THEN** the veil fades in while resizing is active
+- **AND** the measurements update continuously while the resize sequence runs
+- **AND** they use the current container size without waiting for layout
+- **WHEN** the mirror emits `resizeEnd` after the 500ms debounce
+- **THEN** it holds briefly before fading out
+- **AND** it never intercepts pointer events
+
+#### Scenario: Programmatic refresh does not pulse
+
+- **WHEN** `mirror.refresh()` or a cover tuning update emits `resize` without a resize lifecycle
+- **THEN** the veil stays hidden
+- **AND** only the dimension labels may update
+
+#### Scenario: Constructivist structure
+
+- **WHEN** the veil is visible
+- **THEN** it shows the content rectangle and four surrounding reflection regions
+- **AND** live width and height measures sit above and left of the content
+- **AND** pale serif labels name the four reflection regions and the content
+- **AND** `resizing...` sits at the bottom right
+
 ### Requirement: Procedural content field
 
 The content area SHALL contain exactly one decorative Canvas 2D canvas and one decorative slide deck. Both SHALL live inside the mirrored content rectangle. The canvas SHALL be `aria-hidden`; the content SHALL NOT introduce a CSS border. The page SHALL render the first field frame before removing the loading layer.
@@ -392,7 +426,7 @@ If a Canvas 2D context cannot be created, the page SHALL keep a static CSS conte
 
 ### Requirement: Reusable parallax module
 
-The project SHALL provide a shared parallax module that reads each layer's `data-parallax` depth, updates only layer transforms, settles to idle, and cleans up on destroy. `mirror-2610` SHALL mount it only on the quadrant slide, with distinct depths for titles, details, and the centre mark, and SHALL scale its displacement down on narrow viewports.
+The project SHALL provide a shared parallax module that reads each layer's `data-parallax` depth, updates only layer transforms, settles to idle, and cleans up on destroy. `mirror-2610` SHALL mount it on the quadrant and ranking slides, with distinct depths for quadrant copy and ranking board/cards, and SHALL scale its displacement down on narrow viewports.
 
 #### Scenario: Depth declaration
 
@@ -407,6 +441,13 @@ The project SHALL provide a shared parallax module that reads each layer's `data
 - **AND** the transforms are applied only to text inside the quadrant slide
 - **AND** the filter panels and rules do not translate
 
+#### Scenario: Ranking depth layers
+
+- **WHEN** the ranking slide is inspected
+- **THEN** the board and cards carry `data-parallax` depths
+- **AND** hovering a card raises only that card to a nearer depth
+- **AND** leaving the card restores its base depth
+
 #### Scenario: Module cleanup
 
 - **WHEN** the parallax instance is destroyed
@@ -416,14 +457,14 @@ The project SHALL provide a shared parallax module that reads each layer's `data
 
 ### Requirement: Slide deck content
 
-The content area SHALL present four mirrored slides: a cover, a quadrant page, a mechanism page, and an info page. Exactly one slide SHALL be active. Each slide SHALL contain non-empty editorial copy and SHALL live inside the mirrored content subtree. The quadrant slide SHALL use an enlarged serif hierarchy with titles and the centre mark set substantially larger than the detail copy.
+The content area SHALL present four mirrored slides: a cover, a quadrant page, a ranking page, and an info page. Exactly one slide SHALL be active. Each slide SHALL contain non-empty editorial copy and SHALL live inside the mirrored content subtree. The quadrant slide SHALL use an enlarged serif hierarchy with titles and the centre mark set substantially larger than the detail copy.
 
 #### Scenario: Four content slides
 
 - **WHEN** the content is inspected
 - **THEN** it contains four slides with non-empty editorial copy
 - **AND** the cover presents `CEA GameJam`, `2026.10`, and `参赛作品展示`
-- **AND** the remaining slides cover the quadrant page, `02 / Mechanism`, and `03 / Info`
+- **AND** the remaining slides cover the quadrant page, the ranking page, and `03 / Info`
 
 #### Scenario: Quadrant page structure
 
@@ -498,7 +539,7 @@ The content area SHALL present four mirrored slides: a cover, a quadrant page, a
 
 ### Requirement: Persistent sheet rules
 
-The deck SHALL contain two solid absolute rules outside the slide fade groups, clipped by the content overflow. They SHALL overlap into the cover bottom rule and rotate into the quadrant page's centred cross. Separate quadrant rule elements SHALL NOT remain.
+The deck SHALL contain two solid absolute rules outside the slide fade groups, clipped by the content overflow. They SHALL overlap into the cover bottom rule, rotate into the quadrant cross, and become two vertical columns on the ranking page. Separate quadrant rule elements SHALL NOT remain.
 
 #### Scenario: Cover bottom rule
 
@@ -515,14 +556,60 @@ The deck SHALL contain two solid absolute rules outside the slide fade groups, c
 - **AND** both rules use a 3px cross thickness
 - **AND** the quadrant slide contains no separate rule elements
 
+#### Scenario: Ranking columns
+
+- **WHEN** the ranking slide is active
+- **THEN** the two rules stand vertically at 20% and 80% of the content width
+- **AND** both use a 3px thickness
+- **AND** the ranking list occupies the 60% column between them
+
 #### Scenario: Rule transition
 
 - **WHEN** the deck moves from the cover to the quadrant slide
 - **THEN** the rules transition to the cross positions with rotation
 - **AND** the transition starts with the slide transition
 - **AND** each rule is longer than the content diagonal so its ends stay clipped
+- **WHEN** the deck moves to the ranking slide
+- **THEN** the rules separate into the two vertical columns
 - **WHEN** the deck returns to the cover
 - **THEN** the rules transition back to the overlapping bottom rule
+
+### Requirement: Ranking page
+
+The ranking slide SHALL frame a central scrollable team list between the persistent rules, with vertical serif labels outside. The list SHALL be inset from the rules, suppress horizontal scrolling, and scroll vertically without deck navigation. Card depth SHALL follow pointer hover only.
+
+#### Scenario: Framed list
+
+- **WHEN** the ranking slide is active
+- **THEN** the list column sits between the two vertical rules
+- **AND** the scrollable list is inset from both rules
+- **AND** the ranking slide does not clip cards at its own edges
+- **AND** the side labels are vertical
+- **AND** every team card has a transparent background and a 1px black border
+
+#### Scenario: List scrolling
+
+- **WHEN** the pointer is inside the framed ranking area and the wheel or trackpad scrolls
+- **THEN** the scroll is forwarded to the team list as a target and interpolated with rAF
+- **AND** no horizontal scrollbar appears
+- **AND** native, keyboard, or scrollbar movement re-seeds the target
+- **AND** the deck does not change slides
+- **AND** the deck resumes wheel navigation outside that area
+
+#### Scenario: Card hover
+
+- **WHEN** the pointer hovers a team card
+- **THEN** the card scales up without gaining a white fill
+- **AND** its parallax depth becomes nearer than the base card depth
+- **WHEN** the pointer leaves the card, including after clicking its transparent area
+- **THEN** the card returns to its base parallax depth
+
+#### Scenario: Narrow ranking
+
+- **WHEN** the ranking slide is rendered on a narrow viewport
+- **THEN** the side labels are hidden
+- **AND** the rules move to the outer 4% / 96% columns
+- **AND** the list keeps the full remaining width
 
 ### Requirement: Quadrant colour filters
 
@@ -576,7 +663,7 @@ The content SHALL keep the native cursor visible and draw a light-grey ring arou
 
 #### Scenario: Ring on every slide
 
-- **WHEN** the deck moves between the cover, quadrant, mechanism, and info slides with the pointer inside the content
+- **WHEN** the deck moves between the cover, quadrant, ranking, and info slides with the pointer inside the content
 - **THEN** the ring stays visible at the pointer on the new slide
 - **AND** only the quadrant slide applies quadrant hover states
 

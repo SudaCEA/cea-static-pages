@@ -543,6 +543,140 @@ def assert_quadrant_page(page):
     print("quadrant page: ok")
 
 
+def assert_rank_page(page):
+    page.evaluate("window.__mirrorHome.deck.goTo(2)")
+    wait_unlocked(page)
+    page.wait_for_timeout(800)
+    data = page.evaluate(
+        """() => {
+          const art = document.getElementById('art').getBoundingClientRect();
+          const board = document.querySelector('.slide-rank .rank-board');
+          const boardRect = board.getBoundingClientRect();
+          const cards = [...document.querySelectorAll('.slide-rank .rank-card')];
+          const rules = [...document.querySelectorAll('.sheet-rule')].map((el) => {
+            const rect = el.getBoundingClientRect();
+            return rect.x + rect.width / 2;
+          });
+          return {
+            mode: document.getElementById('art').dataset.ruleMode,
+            art: [art.x, art.y, art.width, art.height],
+            board: [boardRect.x, boardRect.y, boardRect.width, boardRect.height],
+            scroll: [board.scrollHeight, board.clientHeight],
+            overflowX: getComputedStyle(board).overflowX,
+            overflowY: getComputedStyle(board).overflowY,
+            labels: [...document.querySelectorAll('.rank-side-title')].map((el) => el.textContent.trim()),
+            cards: cards.length,
+            cardBorder: getComputedStyle(cards[0]).borderTopWidth,
+            cardHeights: cards.map((card) => card.getBoundingClientRect().height),
+            rules
+          };
+        }"""
+    )
+    check(data["mode"] == "rank",
+          f"ranking page did not switch the sheet rules: {data['mode']}")
+    check(data["labels"] == ["评分结果", "Rank list"],
+          f"ranking side labels: {data['labels']}")
+    check(data["cards"] == 12,
+          f"expected twelve ranking placeholders: {data['cards']}")
+    check(data["scroll"][0] > data["scroll"][1] + 40,
+          f"ranking list is not scrollable: {data['scroll']}")
+    check(data["overflowX"] == "hidden" and data["overflowY"] == "auto",
+          f"ranking list scroll axes are wrong: {data}")
+    check(data["board"][2] / data["art"][2] > 0.54,
+          f"ranking list is too narrow: {data['board']} in {data['art']}")
+    check(all(height > 70 for height in data["cardHeights"]),
+          f"ranking cards are too short: {data['cardHeights']}")
+    check(abs(float(data["cardBorder"].replace("px", "")) - 1) <= 0.5,
+          f"ranking card border: {data['cardBorder']}")
+    check(abs(data["rules"][0] - (data["art"][0] + data["art"][2] * 0.2)) <= 2 and
+          abs(data["rules"][1] - (data["art"][0] + data["art"][2] * 0.8)) <= 2,
+          f"ranking rules are not at the 20/80 columns: {data['rules']}")
+    check((data["art"][0] + data["art"][2] * 0.8) -
+          (data["board"][0] + data["board"][2]) > 4,
+          f"ranking scrollbar sits too close to the right rule: {data}")
+
+    # The line itself must hand the wheel to the list when the pointer is on
+    # the boundary, even though the rule has pointer-events:none.
+    page.mouse.move(data["rules"][0] - 1, data["art"][1] + data["art"][3] / 2, steps=3)
+    page.mouse.wheel(0, 120)
+    page.wait_for_timeout(220)
+    line_scroll = page.evaluate(
+        """() => ({
+          index: window.__mirrorHome.deck.getState().index,
+          scrollTop: document.querySelector('.slide-rank .rank-board').scrollTop
+        })"""
+    )
+    check(line_scroll["index"] == 2 and line_scroll["scrollTop"] > 0,
+          f"ranking boundary did not take the wheel: {line_scroll}")
+    page.evaluate("document.querySelector('.slide-rank .rank-board').scrollTop = 0")
+    page.wait_for_timeout(100)
+
+    board = data["board"]
+    page.mouse.move(board[0] + board[2] / 2, board[1] + board[3] / 2, steps=4)
+    page.mouse.wheel(0, 160)
+    page.wait_for_timeout(40)
+    early = page.evaluate(
+        """() => ({
+          index: window.__mirrorHome.deck.getState().index,
+          scroll: window.__mirrorHome.rank.getState().scroll
+        })"""
+    )
+    check(early["index"] == 2 and early["scroll"]["animating"] and
+          early["scroll"]["target"] > early["scroll"]["top"] + 1,
+          f"ranking scroll is not interpolated: {early}")
+    page.wait_for_timeout(600)
+    scrolled = page.evaluate(
+        """() => ({
+          index: window.__mirrorHome.deck.getState().index,
+          scroll: window.__mirrorHome.rank.getState().scroll
+        })"""
+    )
+    check(scrolled["index"] == 2 and scrolled["scroll"]["top"] > 0 and
+          not scrolled["scroll"]["animating"] and
+          abs(scrolled["scroll"]["top"] - scrolled["scroll"]["target"]) < 1,
+          f"ranking interpolation did not settle independently of the deck: {scrolled}")
+    page.evaluate("document.querySelector('.slide-rank .rank-board').scrollTop = 0")
+    page.wait_for_timeout(120)
+
+    card = page.locator('.slide-rank .rank-card').first
+    box = card.bounding_box()
+    page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2, steps=4)
+    page.wait_for_timeout(300)
+    hover = page.evaluate(
+        """() => {
+          const card = document.querySelector('.slide-rank .rank-card');
+          const style = getComputedStyle(card);
+          return {
+            background: style.backgroundColor,
+            scale: Number(style.scale),
+            depth: Number(card.dataset.parallax),
+            rank: window.__mirrorHome.rank.getState()
+          };
+        }"""
+    )
+    check(hover["background"] == "rgba(0, 0, 0, 0)",
+          f"ranking card still fills white on hover: {hover}")
+    check(hover["scale"] > 1.01 and hover["depth"] > 0.5,
+          f"ranking card did not scale or move nearer: {hover}")
+    check(hover["rank"]["hovered"] == "TEAM 01",
+          f"ranking parallax did not track the hovered card: {hover}")
+    page.mouse.click(box["x"] + box["width"] * 0.55,
+                     box["y"] + box["height"] * 0.72)
+    page.wait_for_timeout(80)
+    page.mouse.move(data["art"][0] + data["art"][2] * 0.08,
+                    data["art"][1] + data["art"][3] * 0.5, steps=4)
+    page.wait_for_timeout(220)
+    reset = page.evaluate(
+        """() => ({
+          depth: Number(document.querySelector('.slide-rank .rank-card').dataset.parallax),
+          hover: window.__mirrorHome.rank.getState().hovered
+        })"""
+    )
+    check(reset["hover"] is None and reset["depth"] < 0.4,
+          f"ranking card depth did not reset: {reset}")
+    print("ranking page: ok")
+
+
 def assert_pointer_all_slides(page):
     art = page.evaluate(
         """() => {
@@ -647,14 +781,26 @@ def assert_navigation(page):
     assert_quadrant_page(page)
 
     page.keyboard.press("End")
-    page.wait_for_timeout(100)
+    page.wait_for_function(
+        """() => {
+          const filters = [...document.querySelectorAll('.quadrant-filter')];
+          return filters.length === 4 && filters.every((el) =>
+            el.getAnimations().some((animation) => animation.id === 'mirror-fade')
+          );
+        }""",
+        timeout=2000,
+    )
     fading_filters = page.evaluate(
-        "[...document.querySelectorAll('.quadrant-filter')].map("
-        "(el) => Number(getComputedStyle(el).opacity))"
+        """() => [...document.querySelectorAll('.quadrant-filter')].map((el) =>
+          el.getAnimations()
+            .filter((animation) => animation.id === 'mirror-fade')
+            .map((animation) => animation.effect.getTiming().duration)
+        )"""
     )
     check(len(fading_filters) == 4 and
-          all(0.02 < opacity < 0.98 for opacity in fading_filters),
-          f"filter panels did not fade out with the slide: {fading_filters}")
+          all(durations and all(duration == 220 for duration in durations)
+              for durations in fading_filters),
+          f"filter panels are not in the 220ms fade group: {fading_filters}")
     wait_unlocked(page)
     last = read_layout(page)
     check(last["state"]["index"] == EXPECTED_COUNT - 1, f"End did not reach last: {last}")
@@ -692,6 +838,96 @@ def assert_navigation(page):
     check(page.evaluate("window.__mirrorHome.deck.getState().index") == 0,
           "wheel up did not go back")
     return first, last
+
+
+def assert_structure_veil(page):
+    initial = page.evaluate(
+        """() => {
+          const veil = document.getElementById('structureVeil');
+          const art = document.getElementById('art').getBoundingClientRect();
+          return {
+            hidden: !veil.classList.contains('is-visible'),
+            outsideArt: !document.getElementById('art').contains(veil),
+            pointerEvents: getComputedStyle(veil).pointerEvents,
+            z: Number(getComputedStyle(veil).zIndex),
+            regions: veil.querySelectorAll('.structure-veil-region').length,
+            resizing: veil.querySelector('.structure-veil-resizing')?.textContent || '',
+            width: document.getElementById('structureWidth').textContent,
+            height: document.getElementById('structureHeight').textContent,
+            artWidth: `${Math.round(art.width)}px`,
+            artHeight: `${Math.round(art.height)}px`
+          };
+        }"""
+    )
+    check(initial["hidden"] and initial["outsideArt"],
+          f"structure veil is visible on load or inside the mirror: {initial}")
+    check(initial["pointerEvents"] == "none" and 70 < initial["z"] < 80,
+          f"structure veil layering is wrong: {initial}")
+    check(initial["regions"] == 4 and initial["resizing"] == "resizing...",
+          f"structure veil diagram is incomplete: {initial}")
+    check(initial["width"] == initial["artWidth"] and
+          initial["height"] == initial["artHeight"],
+          f"structure veil dimensions are stale: {initial}")
+
+    page.set_viewport_size({"width": 1120, "height": 820})
+    page.wait_for_timeout(120)
+    early = page.evaluate(
+        """() => {
+          const veil = document.getElementById('structureVeil');
+          return {
+            visible: veil.classList.contains('is-visible'),
+            opacity: Number(getComputedStyle(veil).opacity),
+            width: document.getElementById('structureWidth').textContent,
+            height: document.getElementById('structureHeight').textContent
+          };
+        }"""
+    )
+    check(early["visible"] and early["opacity"] > 0,
+          f"structure veil did not fade in on resizeStart: {early}")
+    check(early["width"] != initial["width"] or
+          early["height"] != initial["height"],
+          f"structure veil measures did not update at resizeStart: "
+          f"{initial} -> {early}")
+    page.wait_for_timeout(730)
+    active = page.evaluate(
+        """() => {
+          const veil = document.getElementById('structureVeil');
+          const style = getComputedStyle(veil);
+          const art = document.getElementById('art').getBoundingClientRect();
+          return {
+            visible: veil.classList.contains('is-visible'),
+            opacity: Number(style.opacity),
+            visibility: style.visibility,
+            width: document.getElementById('structureWidth').textContent,
+            height: document.getElementById('structureHeight').textContent,
+            artWidth: `${Math.round(art.width)}px`,
+            artHeight: `${Math.round(art.height)}px`
+          };
+        }"""
+    )
+    check(active["visible"] and active["visibility"] == "visible" and
+          active["opacity"] > 0.05,
+          f"structure veil did not pulse on resize: {active}")
+    check(active["width"] == active["artWidth"] and
+          active["height"] == active["artHeight"],
+          f"structure veil dimensions did not follow the resize: {active}")
+
+    page.wait_for_timeout(1800)
+    settled = page.evaluate(
+        """() => {
+          const veil = document.getElementById('structureVeil');
+          const style = getComputedStyle(veil);
+          return {
+            visible: veil.classList.contains('is-visible'),
+            opacity: Number(style.opacity),
+            visibility: style.visibility
+          };
+        }"""
+    )
+    check(settled["visible"] is False and
+          (settled["opacity"] < 0.01 or settled["visibility"] == "hidden"),
+          f"structure veil did not fade out: {settled}")
+    print("structure veil: ok")
 
 
 def assert_cover_tuning(page):
@@ -751,6 +987,9 @@ def assert_cover_tuning(page):
           f"bottom-line control changed the placeholder stroke: {baseline}")
     check(baseline["readout"] == ["6px", "32px", "0px", "0px"],
           f"cover tuning readout did not update: {baseline}")
+    check(page.evaluate(
+        "document.getElementById('structureVeil').classList.contains('is-visible')"
+    ) is False, "cover tuning pulsed the structure veil")
 
     set_cover("tuneCoverArtY", -18)
     page.wait_for_timeout(160)
@@ -830,7 +1069,7 @@ def assert_config(page):
           f"copy config kept old fade timings: {deck}")
     parallax = config.get("parallax")
     check(parallax is not None, f"copy config has no parallax: {config}")
-    check(len(parallax["layers"]) == 9,
+    check(len(parallax["layers"]) == 22,
           f"copy config parallax layers: {parallax}")
     check(len({layer["depth"] for layer in parallax["layers"]}) >= 3,
           f"copy config parallax depths: {parallax}")
@@ -921,11 +1160,13 @@ def run_backend(browser, mode, tag, *, width=1200, height=900, dpr=1):
               f"expected {mode}")
         layout = assert_structure(page)
         first, last = assert_navigation(page)
+        assert_rank_page(page)
         assert_pointer_all_slides(page)
         assert_cover_tuning(page)
         assert_config(page)
         page.evaluate("document.getElementById('tuner').style.display = 'none'")
         page.screenshot(path=str(SHOT_DIR / f"probe-deck-{tag}.png"), scale="css")
+        assert_structure_veil(page)
         check(not errors, "console/page errors: " + "\n".join(errors))
         print(f"{tag}:", json.dumps({
             "content": layout["art"],
