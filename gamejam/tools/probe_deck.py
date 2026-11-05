@@ -65,7 +65,7 @@ def read_layout(page):
           const coverMeta = cover.querySelector('.cover-meta');
           const coverSide = cover.querySelector('.cover-side');
           const coverSidePath = cover.querySelector('.cover-side path');
-          const coverRule = cover.querySelector('.cover-rule');
+          const coverRule = document.getElementById('sheetRuleA');
           const coverStyle = getComputedStyle(cover);
           const rectOf = (element) => {
             const rect = element.getBoundingClientRect();
@@ -83,6 +83,12 @@ def read_layout(page):
             deckZ: deckStyle.zIndex,
             deckBackground: deckStyle.backgroundColor,
             deckParent: deck.parentElement.id,
+            artOverflow: getComputedStyle(art).overflow,
+            deckOverflow: deckStyle.overflow,
+            sheetRules: document.querySelectorAll('.sheet-rule').length,
+            sheetRuleFades: document.querySelectorAll('.sheet-rule[data-fade]').length,
+            sheetRuleInSlide: !!document.querySelector('.slide .sheet-rule'),
+            ruleMode: art.dataset.ruleMode,
             mirrorContainerType: getComputedStyle(
               document.querySelector('.mirror-content')
             ).containerType,
@@ -169,6 +175,13 @@ def assert_structure(page):
           f"deck has a background: {layout}")
     check(layout["mirrorContainerType"] == "size",
           f"mirror container is not a size container: {layout}")
+    check(layout["artOverflow"] == "hidden" and layout["deckOverflow"] == "hidden",
+          f"sheet rules would not be clipped by the content: {layout}")
+    check(layout["sheetRules"] == 2 and layout["sheetRuleFades"] == 0 and
+          layout["sheetRuleInSlide"] is False,
+          f"sheet rules are tied to the slide lifecycle: {layout}")
+    check(layout["ruleMode"] == "bar",
+          f"sheet rules do not start as the cover bar: {layout}")
     check(layout["navPointerEvents"] == "none", f"nav intercepts pointer: {layout}")
     check(layout["navInert"] is False, f"nav stayed inert after boot: {layout}")
     check(page.locator("#deckIndex").count() == 0,
@@ -270,7 +283,7 @@ def assert_structure(page):
 
 def assert_quadrant_page(page):
     page.bring_to_front()
-    page.wait_for_timeout(80)
+    page.wait_for_timeout(800)
     data = page.evaluate(
         """() => {
           const slide = document.querySelector('.slide-quadrants');
@@ -294,9 +307,14 @@ def assert_quadrant_page(page):
             }),
             frameBorders: frames.map((el) => style(el).borderTopWidth),
             frameBackgrounds: frames.map((el) => style(el).backgroundColor),
-            ruleSizes: [...slide.querySelectorAll('.quadrant-rule')].map((el) => {
+            sheetRules: [...document.querySelectorAll('.sheet-rule')].map((el) => {
               const r = el.getBoundingClientRect();
-              return [r.width, r.height];
+              return {
+                id: el.id,
+                rect: [r.x, r.y, r.width, r.height],
+                top: style(el).top,
+                transform: style(el).transform
+              };
             }),
             titleFonts: units.map((el) => style(el.querySelector('.quadrant-title')).fontFamily),
             titleAligns: units.map((el) => style(el.querySelector('.quadrant-title')).textAlign),
@@ -306,8 +324,10 @@ def assert_quadrant_page(page):
             }),
             filterValues: filters.map((el) => style(el).backdropFilter),
             filterZ: filters.map((el) => Number(style(el).zIndex)),
+            slideZ: Number(style(slide).zIndex),
             contentZ: Number(style(slide.querySelector('.quadrant-content')).zIndex),
             pointerZ: Number(style(pointer).zIndex),
+            pointerParent: pointer.parentElement?.id || null,
             centerZ: Number(style(slide.querySelector('.quadrant-center')).zIndex),
             centerBackground: style(slide.querySelector('.quadrant-center')).backgroundColor,
             centerBorder: style(slide.querySelector('.quadrant-center')).borderTopWidth,
@@ -318,11 +338,13 @@ def assert_quadrant_page(page):
             centerParallax: Number(
               slide.querySelector('.quadrant-center-word').dataset.parallax
             ),
-            ruleParallax: slide.querySelectorAll('.quadrant-rule[data-parallax]').length,
+            ruleParallax: document.querySelectorAll('.sheet-rule[data-parallax]').length,
             filterParallax: slide.querySelectorAll('.quadrant-filter[data-parallax]').length,
             unitParallax: units.map((el) => el.querySelectorAll('[data-parallax]').length),
             titles: units.map((el) => el.querySelector('.quadrant-title').textContent.trim()),
             details: units.map((el) => el.querySelector('.quadrant-detail').textContent.trim()),
+            filterOpacities: filters.map((el) => Number(style(el).opacity)),
+            filterFadeCount: slide.querySelectorAll('.quadrant-filter[data-fade]').length,
             filterDefs: defs.map((filter) => ({
               id: filter.id,
               floods: [...filter.querySelectorAll('feFlood')].map((el) => el.getAttribute('flood-color')),
@@ -340,6 +362,8 @@ def assert_quadrant_page(page):
             ringSize: style(pointer).getPropertyValue('--quad-ring-size').trim(),
             ringStroke: style(pointer).getPropertyValue('--quad-ring-stroke').trim(),
             artCursor: style(document.getElementById('art')).cursor,
+            ruleMode: document.getElementById('art').dataset.ruleMode,
+            legacyRules: slide.querySelectorAll('.quadrant-rule').length,
             parallaxLayers: parallax ? parallax.getState().layers.map((layer) => layer.depth) : null,
             parallaxMax: parallax ? parallax.getState().maxShiftPx : null,
             outsideParallax: document.querySelectorAll(
@@ -382,11 +406,23 @@ def assert_quadrant_page(page):
     check(all(background == "rgba(0, 0, 0, 0)"
               for background in data["frameBackgrounds"]),
           f"quadrant copy has an opaque background: {data['frameBackgrounds']}")
-    check(len(data["ruleSizes"]) == 2 and
-          data["ruleSizes"][0][1] == 3 and data["ruleSizes"][1][0] == 3,
-          f"quadrant rules are not 3px thick: {data['ruleSizes']}")
-
     stage = data["stage"]
+    stage_width, stage_height = stage[2], stage[3]
+    check(data["ruleMode"] == "cross",
+          f"sheet rules did not enter cross mode: {data['ruleMode']}")
+    check(data["legacyRules"] == 0,
+          f"old quadrant rules are still in the DOM: {data['legacyRules']}")
+    check(len(data["sheetRules"]) == 2,
+          f"expected two persistent sheet rules: {data['sheetRules']}")
+    if len(data["sheetRules"]) == 2:
+        horizontal, vertical = data["sheetRules"]
+        rule_length = 2 * max(stage_width, stage_height)
+        check(horizontal["rect"][2] >= rule_length - 1 and
+              abs(horizontal["rect"][3] - 3) <= 0.5,
+              f"horizontal sheet rule is too short: {horizontal}")
+        check(abs(vertical["rect"][2] - 3) <= 0.5 and
+              vertical["rect"][3] >= rule_length - 1,
+              f"vertical sheet rule is too short: {vertical}")
     frames = data["frameRects"]
     corners = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
     for index, ((sx, sy), frame) in enumerate(zip(corners, frames)):
@@ -417,8 +453,14 @@ def assert_quadrant_page(page):
           f"blue filter is not a screen tint: {data['filterDefs']}")
     check(data["filterDefs"][3]["saturates"] == [{"type": "saturate", "values": "0"}],
           f"grayscale filter is not saturation removal: {data['filterDefs']}")
-    check(data["contentZ"] < data["pointerZ"] < data["centerZ"] < min(data["filterZ"]),
-          f"content/pointer/centre/filter stacking order is wrong: {data}")
+    check(data["filterFadeCount"] == 4 and
+          all(opacity > 0.99 for opacity in data["filterOpacities"]),
+          f"filter panels are not fully faded in: {data['filterOpacities']}")
+    check(data["pointerParent"] == "deck" and data["pointerZ"] == 0 and
+          data["slideZ"] == 1,
+          f"pointer is not a deck-level layer below the slides: {data}")
+    check(data["contentZ"] < data["centerZ"] < min(data["filterZ"]),
+          f"content/centre/filter stacking order is wrong: {data}")
     check(data["centerBackground"] == "rgba(0, 0, 0, 0)" and
           data["centerBorder"] == "0px",
           f"centre mark still has a frame: {data}")
@@ -501,6 +543,49 @@ def assert_quadrant_page(page):
     print("quadrant page: ok")
 
 
+def assert_pointer_all_slides(page):
+    art = page.evaluate(
+        """() => {
+          const r = document.getElementById('art').getBoundingClientRect();
+          return {x: r.x, y: r.y, width: r.width, height: r.height};
+        }"""
+    )
+    for index in (0, 2, 3):
+        if page.evaluate("window.__mirrorHome.deck.getState().index") != index:
+            page.evaluate(f"window.__mirrorHome.deck.goTo({index})")
+            wait_unlocked(page)
+            page.wait_for_timeout(300)
+
+        page.mouse.move(
+            art["x"] + art["width"] * 0.5,
+            art["y"] + art["height"] * 0.2,
+            steps=4,
+        )
+        page.wait_for_timeout(350)
+        state = page.evaluate("window.__mirrorHome.quadrant.getState()")
+        visible = page.evaluate(
+            "document.getElementById('quadrantPointer').classList.contains('is-visible')"
+        )
+        check(state["active"] is True and state["shown"] is True and visible,
+              f"pointer ring is missing on slide {index}: {state}")
+        check(state["hover"] is None,
+              f"non-quadrant slide kept a quadrant hover: {state}")
+        check(page.evaluate(
+            "document.getElementById('quadrantPointer').parentElement.id"
+        ) == "deck", "pointer ring is not a deck-level layer")
+
+    # Return to the cover and confirm the ring yields to the paging chrome.
+    page.evaluate("window.__mirrorHome.deck.goTo(0)")
+    wait_unlocked(page)
+    nav = page.locator("#deckNext").bounding_box()
+    page.mouse.move(nav["x"] + nav["width"] / 2, nav["y"] + nav["height"] / 2, steps=3)
+    page.wait_for_timeout(220)
+    check(page.evaluate(
+        "document.getElementById('quadrantPointer').classList.contains('is-visible')"
+    ) is False, "pointer ring stayed visible over the paging controls")
+    print("pointer all slides: ok")
+
+
 def assert_navigation(page):
     page.locator("#deckNext").click()
     immediate = page.evaluate("window.__mirrorHome.deck.getState()")
@@ -562,6 +647,14 @@ def assert_navigation(page):
     assert_quadrant_page(page)
 
     page.keyboard.press("End")
+    page.wait_for_timeout(100)
+    fading_filters = page.evaluate(
+        "[...document.querySelectorAll('.quadrant-filter')].map("
+        "(el) => Number(getComputedStyle(el).opacity))"
+    )
+    check(len(fading_filters) == 4 and
+          all(0.02 < opacity < 0.98 for opacity in fading_filters),
+          f"filter panels did not fade out with the slide: {fading_filters}")
     wait_unlocked(page)
     last = read_layout(page)
     check(last["state"]["index"] == EXPECTED_COUNT - 1, f"End did not reach last: {last}")
@@ -620,14 +713,14 @@ def assert_cover_tuning(page):
 
     set_cover("tuneCoverBar", 6)
     set_cover("tuneCoverArtY", 0)
-    page.wait_for_timeout(220)
+    page.wait_for_timeout(850)
     baseline = page.evaluate(
         """() => {
           const cover = document.querySelector('.slide-cover');
           const lockup = cover.querySelector('.cover-lockup').getBoundingClientRect();
           const brand = cover.querySelector('.cover-brand-text').getBoundingClientRect();
           const side = cover.querySelector('.cover-side').getBoundingClientRect();
-          const rule = cover.querySelector('.cover-rule').getBoundingClientRect();
+          const rule = document.getElementById('sheetRuleA').getBoundingClientRect();
           const rootStyle = getComputedStyle(document.documentElement);
           return {
             brandTop: brand.top,
@@ -676,13 +769,13 @@ def assert_cover_tuning(page):
           f"image translate did not move the placeholder: {baseline} -> {image_shift}")
 
     page.locator("#tuneReset").click()
-    page.wait_for_timeout(220)
+    page.wait_for_timeout(850)
     reset = page.evaluate(
         """() => {
           const cover = document.querySelector('.slide-cover');
           const lockup = cover.querySelector('.cover-lockup').getBoundingClientRect();
           const side = cover.querySelector('.cover-side').getBoundingClientRect();
-          const rule = cover.querySelector('.cover-rule').getBoundingClientRect();
+          const rule = document.getElementById('sheetRuleA').getBoundingClientRect();
           const rootStyle = getComputedStyle(document.documentElement);
           return {
             barHeight: rootStyle.getPropertyValue('--cover-bar-height').trim(),
@@ -828,6 +921,7 @@ def run_backend(browser, mode, tag, *, width=1200, height=900, dpr=1):
               f"expected {mode}")
         layout = assert_structure(page)
         first, last = assert_navigation(page)
+        assert_pointer_all_slides(page)
         assert_cover_tuning(page)
         assert_config(page)
         page.evaluate("document.getElementById('tuner').style.display = 'none'")

@@ -473,7 +473,8 @@ The content area SHALL present four mirrored slides: a cover, a quadrant page, a
 #### Scenario: Cover fade order
 
 - **WHEN** the cover enters or leaves
-- **THEN** the brand fades first, the date second, the exhibition title third, the sideview placeholder fourth, and the bottom rule last
+- **THEN** the brand fades first, the date second, the exhibition title third, and the sideview placeholder fourth
+- **AND** the persistent sheet rules do not fade with the slide
 - **AND** the exit uses a shorter independent delay for each element
 
 #### Scenario: Deck participates in the mirror
@@ -495,9 +496,37 @@ The content area SHALL present four mirrored slides: a cover, a quadrant page, a
 - **THEN** multi-column sections stack and the slide content remains within the content rectangle
 - **AND** no slide has horizontal or vertical overflow
 
+### Requirement: Persistent sheet rules
+
+The deck SHALL contain two solid absolute rules outside the slide fade groups, clipped by the content overflow. They SHALL overlap into the cover bottom rule and rotate into the quadrant page's centred cross. Separate quadrant rule elements SHALL NOT remain.
+
+#### Scenario: Cover bottom rule
+
+- **WHEN** the cover is active
+- **THEN** the two rules overlap at the content bottom into one visible rule
+- **AND** each uses the configured cover line height
+- **AND** the rules are direct deck children outside every slide fade group
+
+#### Scenario: Quadrant cross
+
+- **WHEN** the quadrant slide is active
+- **THEN** one rule spans the content horizontally at the centre height
+- **AND** the other rotates 90 degrees into the full-height centre rule
+- **AND** both rules use a 3px cross thickness
+- **AND** the quadrant slide contains no separate rule elements
+
+#### Scenario: Rule transition
+
+- **WHEN** the deck moves from the cover to the quadrant slide
+- **THEN** the rules transition to the cross positions with rotation
+- **AND** the transition starts with the slide transition
+- **AND** each rule is longer than the content diagonal so its ends stay clipped
+- **WHEN** the deck returns to the cover
+- **THEN** the rules transition back to the overlapping bottom rule
+
 ### Requirement: Quadrant colour filters
 
-The quadrant slide SHALL use transparent `backdrop-filter` panels with inline SVG filters for all four quadrants: red screen in the top-left, green screen in the top-right, blue screen in the bottom-left, and saturation removal in the bottom-right. The panels SHALL cover the quadrant copy, pointer, and unframed centre mark.
+The quadrant slide SHALL use transparent `backdrop-filter` panels with inline SVG filters for all four quadrants: red screen in the top-left, green screen in the top-right, blue screen in the bottom-left, and saturation removal in the bottom-right. The panels SHALL cover the quadrant copy, pointer, and unframed centre mark. They SHALL fade in with the slide and fade out before it hides.
 
 #### Scenario: Screen tint preserves white
 
@@ -521,22 +550,35 @@ The quadrant slide SHALL use transparent `backdrop-filter` panels with inline SV
 - **AND** the panels sit above the quadrant text, pointer, and centre mark
 - **AND** the centre mark has no surrounding border or opaque background
 
+#### Scenario: Filter fade
+
+- **WHEN** the quadrant slide enters or leaves
+- **THEN** all four filter panels animate opacity with the slide fade group
+- **AND** the tint is fully applied after the slide settles
+- **AND** the SVG filter URL itself is not interpolated
+
 #### Scenario: Both mirror backends
 
 - **WHEN** the quadrant page is rendered through WebGL or SVG
 - **THEN** the tint panels, pointer, and mirrored copies are all visible
 - **AND** no page or console error is produced
 
-### Requirement: Quadrant pointer
+### Requirement: Content pointer ring
 
-The quadrant slide SHALL keep the native cursor visible and draw a light-grey ring around it inside the mirrored content. The ring SHALL stay centred on the pointer, increase in diameter with pointer speed, decrease in stroke width with speed, hide when outside the content or inactive, and remain below the backdrop-filter panels so quadrant tints also colour it.
+The content SHALL keep the native cursor visible and draw a light-grey ring around it inside the mirrored content on every slide. The ring SHALL stay centred on the pointer, increase in diameter with pointer speed, decrease in stroke width with speed, hide when outside the content, and remain below the quadrant backdrop-filter panels so quadrant tints also colour it.
 
 #### Scenario: Native cursor remains
 
-- **WHEN** the quadrant slide is active
+- **WHEN** any slide is active
 - **THEN** the browser's native cursor is visible over the content
 - **AND** the custom ring is drawn around the same pointer position
 - **AND** the ring does not intercept pointer events
+
+#### Scenario: Ring on every slide
+
+- **WHEN** the deck moves between the cover, quadrant, mechanism, and info slides with the pointer inside the content
+- **THEN** the ring stays visible at the pointer on the new slide
+- **AND** only the quadrant slide applies quadrant hover states
 
 #### Scenario: Speed-reactive ring
 
@@ -548,7 +590,7 @@ The quadrant slide SHALL keep the native cursor visible and draw a light-grey ri
 
 #### Scenario: Pointer leaves the content
 
-- **WHEN** the pointer exits the content rectangle, enters the tuner or paging controls, or the quadrant slide is hidden
+- **WHEN** the pointer exits the content rectangle, enters the tuner or paging controls, or the boot layer is active
 - **THEN** the custom ring and all quadrant hover states are hidden
 - **AND** the native cursor remains available outside the content
 
