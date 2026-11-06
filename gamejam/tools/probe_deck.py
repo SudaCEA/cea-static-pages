@@ -282,8 +282,9 @@ def assert_structure(page):
         )
         check(glass_clip.startswith("path("),
               f"SVG glass is not clipped around the content: {glass_clip}")
-    check("Interactive study" in layout["slides"][3]["text"],
-          f"info copy missing: {layout}")
+    check("作品介绍" in layout["slides"][3]["text"] and
+          "Video Panel" in layout["slides"][3]["text"],
+          f"detail copy missing: {layout}")
     return layout
 
 
@@ -770,6 +771,326 @@ def assert_rank_page(page):
     check(reset["hover"] is None and reset["depth"] < 0.4,
           f"ranking card depth did not reset: {reset}")
     print("ranking page: ok")
+
+
+def assert_detail_page(page):
+    before = page.evaluate(
+        """() => ({
+          mode: document.getElementById('art').dataset.ruleMode,
+          art: (() => {
+            const r = document.getElementById('art').getBoundingClientRect();
+            return [r.x, r.y, r.width, r.height];
+          })(),
+          rules: [...document.querySelectorAll('.sheet-rule')].map((el) => {
+            const r = el.getBoundingClientRect();
+            return {
+              x: r.x, y: r.y, width: r.width, height: r.height,
+              cx: r.x + r.width / 2, cy: r.y + r.height / 2,
+              transform: getComputedStyle(el).transform
+            };
+          })
+        })"""
+    )
+    check(before["mode"] == "rank",
+          f"detail transition did not start from the ranking rules: {before['mode']}")
+    check(len(before["rules"]) == 2 and
+          before["rules"][0]["height"] > before["rules"][0]["width"] and
+          before["rules"][1]["height"] > before["rules"][1]["width"],
+          f"ranking rules are not both vertical before detail: {before['rules']}")
+    page.evaluate("window.__mirrorHome.deck.goTo(3)")
+    wait_unlocked(page)
+    page.wait_for_timeout(800)
+    data = page.evaluate(
+        """() => {
+          const art = document.getElementById('art');
+          const artRect = art.getBoundingClientRect();
+          const slide = document.querySelector('.slide-detail');
+          const slideRect = slide.getBoundingClientRect();
+          const rules = [...document.querySelectorAll('.sheet-rule')].map((el) => {
+            const rect = el.getBoundingClientRect();
+            return {
+              x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+              cx: rect.x + rect.width / 2, cy: rect.y + rect.height / 2,
+              transform: getComputedStyle(el).transform
+            };
+          });
+          const rectOf = (element) => {
+            const rect = element.getBoundingClientRect();
+            return [rect.x, rect.y, rect.width, rect.height, rect.right, rect.bottom];
+          };
+          const fontOf = (selector) => getComputedStyle(
+            slide.querySelector(selector)
+          ).fontFamily;
+          const card = slide.querySelector('.detail-intro-card');
+          const video = slide.querySelector('.detail-video');
+          const side = slide.querySelector('.detail-side');
+          const footer = slide.querySelector('.detail-footer');
+          const fadeItems = [...slide.querySelectorAll('[data-fade]')];
+          return {
+            mode: art.dataset.ruleMode,
+            art: [artRect.x, artRect.y, artRect.width, artRect.height],
+            slide: [slideRect.x, slideRect.y, slideRect.width, slideRect.height],
+            overflow: [slide.scrollWidth, slide.clientWidth,
+                       slide.scrollHeight, slide.clientHeight],
+            rules,
+            intro: rectOf(slide.querySelector('.detail-intro')),
+            card: rectOf(card),
+            video: rectOf(video),
+            side: rectOf(side),
+            footer: rectOf(footer),
+            work: rectOf(slide.querySelector('.detail-work')),
+            award: rectOf(slide.querySelector('.detail-award')),
+            footerRank: rectOf(slide.querySelector('.detail-award-rank')),
+            footerTag: rectOf(slide.querySelector('.detail-award-name')),
+            footerAlign: getComputedStyle(
+              slide.querySelector('.detail-award')
+            ).alignItems,
+            footerRankMargin: Number.parseFloat(getComputedStyle(
+              slide.querySelector('.detail-award-rank')
+            ).marginRight),
+            fonts: {
+              title: fontOf('.detail-intro-title'),
+              body: fontOf('.detail-intro-body'),
+              team: fontOf('.detail-intro-team'),
+              work: fontOf('.detail-work'),
+              award: fontOf('.detail-side-award'),
+              awardMeta: fontOf('.detail-side-meta'),
+              ctaTitle: fontOf('.detail-cta-title'),
+              ctaSub: fontOf('.detail-cta-sub'),
+              micro: fontOf('.detail-video-top .micro'),
+              footerAward: fontOf('.detail-award-name'),
+              footerRank: fontOf('.detail-award-rank')
+            },
+            footerRankSize: Number.parseFloat(getComputedStyle(
+              slide.querySelector('.detail-award-rank')
+            ).fontSize),
+            footerAwardSize: Number.parseFloat(getComputedStyle(
+              slide.querySelector('.detail-award-name')
+            ).fontSize),
+            footerAwardBorder: getComputedStyle(
+              slide.querySelector('.detail-award-name')
+            ).borderTopColor,
+            footerAwardBorderWidth: getComputedStyle(
+              slide.querySelector('.detail-award-name')
+            ).borderTopWidth,
+            cardBorder: getComputedStyle(card).borderTopWidth,
+            sideBackground: getComputedStyle(side).backgroundColor,
+            awardColor: getComputedStyle(slide.querySelector('.detail-side-award')).color,
+            awardBorder: getComputedStyle(slide.querySelector('.detail-side-award')).borderTopColor,
+            indexColor: getComputedStyle(slide.querySelector('.detail-side-index')).color,
+            indexFontSize: Number.parseFloat(
+              getComputedStyle(slide.querySelector('.detail-side-index')).fontSize
+            ),
+            awardRankColor: getComputedStyle(slide.querySelector('.detail-award-rank')).color,
+            footerAwardColor: getComputedStyle(slide.querySelector('.detail-award-name')).color,
+            text: {
+              work: slide.querySelector('.detail-work').textContent.trim(),
+              team: slide.querySelector('.detail-intro-team').textContent.trim(),
+              award: slide.querySelector('.detail-side-award').textContent.trim(),
+              awardMeta: slide.querySelector('.detail-side-meta').textContent.trim(),
+              awardRank: slide.querySelector('.detail-award-rank').textContent.trim(),
+              footerAward: slide.querySelector('.detail-award-name').textContent.trim(),
+              videoCount: slide.querySelector('#detailVideoCount').textContent.trim(),
+              sideCount: slide.querySelector('#detailSideCount').textContent.trim(),
+              index: slide.querySelector('.detail-side-index').textContent.trim(),
+              ctaTitle: slide.querySelector('.detail-cta-title').textContent.trim(),
+              ctaSub: slide.querySelector('.detail-cta-sub').textContent.trim(),
+              label: slide.getAttribute('aria-label')
+            },
+            fadeCount: fadeItems.length,
+            fadeInDelays: fadeItems.map((el) => Number(el.dataset.fadeInDelay)),
+            fadeOutDelays: fadeItems.map((el) => Number(el.dataset.fadeOutDelay)),
+            state: window.__mirrorHome.detail.getState()
+          };
+        }"""
+    )
+    check(data["mode"] == "detail",
+          f"detail page did not switch the sheet rules: {data['mode']}")
+    check(data["overflow"][0] <= data["overflow"][1] + 2 and
+          data["overflow"][2] <= data["overflow"][3] + 2,
+          f"detail page overflows: {data['overflow']}")
+    art_left, art_top, art_width, art_height = data["art"]
+    check(len(data["rules"]) == 2,
+          f"detail page should have two sheet rules: {data['rules']}")
+    if len(data["rules"]) == 2:
+        vertical = data["rules"][0]
+        footer_rule = data["rules"][1]
+        check(vertical["height"] > vertical["width"] and
+              footer_rule["width"] > footer_rule["height"],
+              f"detail rules changed the wrong way: {data['rules']}")
+        check(abs(vertical["cx"] - (art_left + art_width * 0.24)) <= 2,
+              f"detail rail rule is not at 24%: {vertical} in {data['art']}")
+        check(abs(footer_rule["cy"] - (art_top + art_height * 0.9)) <= 2,
+              f"detail footer rule is not at 90%: {footer_rule} in {data['art']}")
+        check(vertical["height"] >= art_height - 1 and
+              footer_rule["width"] >= art_width - 1,
+              f"detail rules do not span the content: {data['rules']}")
+        check(footer_rule["transform"].startswith("matrix(-1, 0, 0, -1"),
+              f"right rule did not turn clockwise to 180deg: {footer_rule['transform']}")
+        check(abs(before["rules"][0]["cx"] -
+                  (before["art"][0] + before["art"][2] * 0.3)) <= 2 and
+              abs(before["rules"][1]["cx"] -
+                  (before["art"][0] + before["art"][2] * 0.9)) <= 2,
+              f"ranking rules were not at 30/90 before detail: {before}")
+    card = data["card"]
+    intro = data["intro"]
+    video = data["video"]
+    side = data["side"]
+    footer = data["footer"]
+    check(card[0] > intro[0] and card[4] < intro[4] and
+          card[1] > art_top and card[5] < footer[1],
+          f"detail intro card leaves its rail: {card} {intro}")
+    check(card[2] > art_width * 0.14 and card[2] < art_width * 0.2 and
+          card[3] > art_height * 0.5,
+          f"detail intro rail is not compact: {card} in {data['art']}")
+    check(video[2] > art_width * 0.65,
+          f"detail video did not gain the rail width: {video} in {data['art']}")
+    row_center = art_top + (footer[1] - art_top) / 2
+    check(abs((card[1] + card[5]) / 2 - row_center) <= 8,
+          f"detail intro card is not vertically centred: {card} {data['art']}")
+    check(video[0] > vertical["cx"] + 8 and
+          video[4] < art_left + art_width - 20 and
+          video[1] > art_top and video[5] < footer_rule["cy"] - 8,
+          f"detail video panel is outside the main column: {video}")
+    check(side[0] < video[4] - 10 and side[4] > video[4] + 10 and
+          side[4] < art_left + art_width - 8 and
+          side[5] > footer_rule["cy"] + 10 and
+          side[1] > video[1] + 20,
+          f"detail side card does not overlap the video/footer properly: "
+          f"{side} {video} {footer_rule}")
+    check((data["work"][0] + data["work"][2] / 2) >
+          art_left + art_width * 0.55,
+          f"detail work title is not centred in the main column: {data['work']}")
+    check(data["footerAlign"] == "center",
+          f"detail footer award is not centre-aligned: {data['footerAlign']}")
+    footer_rank = data["footerRank"]
+    footer_tag = data["footerTag"]
+    check(abs((footer_rank[1] + footer_rank[3] / 2) -
+              (footer_tag[1] + footer_tag[3] / 2)) <= 1.5,
+          f"detail footer rank/tag are not vertically centred: "
+          f"{footer_rank} / {footer_tag}")
+    check(data["footerRankMargin"] >= 3,
+          f"detail footer rank has no right margin: {data['footerRankMargin']}")
+    award_center = data["award"][0] + data["award"][2] / 2
+    rail_center = art_left + art_width * 0.24 / 2
+    check(abs(award_center - rail_center) <= 2,
+          f"detail footer award is not horizontally centred in its rail: "
+          f"{award_center} vs {rail_center}")
+    check(abs(float(data["cardBorder"].replace("px", "")) - 1) <= 0.5,
+          f"detail intro card border: {data['cardBorder']}")
+    check(data["sideBackground"] == "rgb(255, 255, 255)",
+          f"detail side card is not opaque: {data['sideBackground']}")
+    check(all("serif" in font.lower() for font in data["fonts"].values()),
+          f"detail page still mixes in a non-serif face: {data['fonts']}")
+    check(data["footerRankSize"] >= 24 and data["footerAwardSize"] >= 14 and
+          data["footerAwardSize"] < data["footerRankSize"] * 0.65,
+          f"footer type scale is wrong: "
+          f"{data['footerRankSize']} / {data['footerAwardSize']}")
+    check(abs(float(data["footerAwardBorderWidth"].replace("px", "")) - 1) <= 0.5,
+          f"footer award tag has no border: {data['footerAwardBorderWidth']}")
+    check(data["awardBorder"] == "rgb(216, 74, 51)" and
+          data["footerAwardBorder"] == "rgb(216, 74, 51)",
+          f"footer award tag lost its accent border: "
+          f"{data['awardBorder']} / {data['footerAwardBorder']}")
+    text = data["text"]
+    check(text["work"] == "镜界" and text["team"] == "吴彦组",
+          f"detail default work is wrong: {text}")
+    check(text["award"] == "完成度奖" and text["footerAward"] == "完成度奖" and
+          text["awardRank"] == "01" and "8.65" in text["awardMeta"],
+          f"detail award copy is wrong: {text}")
+    check(data["awardColor"] == "rgb(216, 74, 51)" and
+          data["awardBorder"] == "rgb(216, 74, 51)" and
+          data["indexColor"] == "rgb(216, 74, 51)" and
+          data["awardRankColor"] == "rgb(216, 74, 51)" and
+          data["footerAwardColor"] == "rgb(216, 74, 51)",
+          f"detail award/podium accent is missing: {data}")
+    check(data["indexFontSize"] >= 72,
+          f"detail index was not enlarged: {data['indexFontSize']}")
+    check(text["videoCount"] == "01 / 15" and text["sideCount"] == "01" and
+          text["index"] == "01",
+          f"detail index copy is wrong: {text}")
+    check(text["ctaTitle"] == "查看作品" and text["ctaSub"] == "View entry",
+          f"detail CTA copy is wrong: {text}")
+    check("镜界" in text["label"],
+          f"detail slide label is stale: {text['label']}")
+    check(data["state"] == {
+        "index": 0, "count": 15, "teamId": 7, "workTitle": "镜界"
+    }, f"detail controller state is wrong: {data['state']}")
+    check(data["fadeCount"] >= 4 and
+          len(set(data["fadeInDelays"])) > 1 and
+          len(set(data["fadeOutDelays"])) > 1,
+          f"detail fade group is incomplete: {data}")
+
+    page.locator("#detailNext").click()
+    page.wait_for_timeout(120)
+    next_state = page.evaluate(
+        """() => ({
+          state: window.__mirrorHome.detail.getState(),
+          work: document.getElementById('detailWork').textContent.trim(),
+          team: document.getElementById('detailTeam').textContent.trim(),
+          award: document.getElementById('detailAward').textContent.trim(),
+          awardColor: getComputedStyle(document.getElementById('detailAward')).color,
+          awardBorder: getComputedStyle(document.getElementById('detailAward')).borderTopColor,
+          indexColor: getComputedStyle(document.getElementById('detailIndex')).color,
+          rank: document.getElementById('detailAwardRank').textContent.trim(),
+          rankColor: getComputedStyle(document.getElementById('detailAwardRank')).color,
+          footerAwardColor: getComputedStyle(
+            document.getElementById('detailFooterAward')
+          ).color,
+          footerAwardBorder: getComputedStyle(
+            document.getElementById('detailFooterAward')
+          ).borderTopColor,
+          footerAward: document.getElementById('detailFooterAward').textContent.trim()
+        })"""
+    )
+    check(next_state["state"]["index"] == 1 and
+          next_state["state"]["workTitle"] == "破镜" and
+          next_state["work"] == "破镜" and
+          next_state["team"] == "欢乐斗地组" and
+          next_state["award"] == "入围作品" and
+          next_state["footerAward"] == "入围作品",
+          f"detail next work did not update: {next_state}")
+    check(next_state["awardColor"] != "rgb(216, 74, 51)" and
+          next_state["awardBorder"] != "rgb(216, 74, 51)" and
+          next_state["footerAwardColor"] != "rgb(216, 74, 51)" and
+          next_state["footerAwardBorder"] != "rgb(216, 74, 51)",
+          f"non-award detail copy is accented: {next_state}")
+    check(next_state["indexColor"] == "rgb(216, 74, 51)" and
+          next_state["rankColor"] == "rgb(216, 74, 51)" and
+          next_state["rank"] == "02",
+          f"top-three detail rank is not accented or padded: {next_state}")
+
+    page.locator("#detailNext").click()
+    page.locator("#detailNext").click()
+    page.wait_for_timeout(120)
+    fourth = page.evaluate(
+        """() => ({
+          state: window.__mirrorHome.detail.getState(),
+          award: document.getElementById('detailAward').textContent.trim(),
+          awardColor: getComputedStyle(document.getElementById('detailAward')).color,
+          indexColor: getComputedStyle(document.getElementById('detailIndex')).color,
+          rank: document.getElementById('detailAwardRank').textContent.trim(),
+          rankColor: getComputedStyle(document.getElementById('detailAwardRank')).color
+        })"""
+    )
+    check(fourth["state"]["index"] == 3 and
+          fourth["state"]["workTitle"] == "红之镜demo" and
+          fourth["rank"] == "04",
+          f"detail fourth work did not load: {fourth}")
+    check(fourth["indexColor"] != "rgb(216, 74, 51)" and
+          fourth["rankColor"] != "rgb(216, 74, 51)",
+          f"rank four kept the podium accent: {fourth}")
+    check(fourth["award"] == "美术奖" and
+          fourth["awardColor"] == "rgb(216, 74, 51)",
+          f"non-podium award tag lost its accent: {fourth}")
+
+    for _ in range(3):
+        page.locator("#detailPrev").click()
+        page.wait_for_timeout(40)
+    back_state = page.evaluate("window.__mirrorHome.detail.getState()")
+    check(back_state["index"] == 0 and back_state["teamId"] == 7,
+          f"detail previous work did not return: {back_state}")
+    print("detail page: ok")
 
 
 def assert_pointer_all_slides(page):
@@ -1260,6 +1581,7 @@ def run_backend(browser, mode, tag, *, width=1200, height=900, dpr=1):
         layout = assert_structure(page)
         first, last = assert_navigation(page)
         assert_rank_page(page)
+        assert_detail_page(page)
         assert_pointer_all_slides(page)
         assert_cover_tuning(page)
         assert_config(page)

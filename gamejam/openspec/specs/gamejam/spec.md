@@ -465,14 +465,14 @@ The project SHALL provide a shared parallax module that reads each layer's `data
 
 ### Requirement: Slide deck content
 
-The content area SHALL present four mirrored slides: a cover, a quadrant page, a ranking page, and an info page. Exactly one slide SHALL be active. Each slide SHALL contain non-empty editorial copy and SHALL live inside the mirrored content subtree. The quadrant slide SHALL use an enlarged serif hierarchy with titles and the centre mark set substantially larger than the detail copy.
+The content area SHALL present four mirrored slides: a cover, a quadrant page, a ranking page, and a work detail page. Exactly one slide SHALL be active. Each slide SHALL contain non-empty editorial copy and SHALL live inside the mirrored content subtree. The quadrant slide SHALL use an enlarged serif hierarchy with titles and the centre mark set substantially larger than the detail copy.
 
 #### Scenario: Four content slides
 
 - **WHEN** the content is inspected
 - **THEN** it contains four slides with non-empty editorial copy
 - **AND** the cover presents `CEA GameJam`, `2026.10`, and `参赛作品展示`
-- **AND** the remaining slides cover the quadrant page, the ranking page, and `03 / Info`
+- **AND** the remaining slides cover the quadrant page, the ranking page, and `03 / Work`
 
 #### Scenario: Quadrant page structure
 
@@ -547,7 +547,7 @@ The content area SHALL present four mirrored slides: a cover, a quadrant page, a
 
 ### Requirement: Persistent sheet rules
 
-The deck SHALL contain two solid absolute rules outside the slide fade groups, clipped by the content overflow. They SHALL overlap into the cover bottom rule, rotate into the quadrant cross, and become two vertical columns on the ranking page. Separate quadrant rule elements SHALL NOT remain.
+The deck SHALL contain two solid absolute rules outside the slide fade groups, clipped by the content overflow. They SHALL overlap into the cover bottom rule, rotate into the quadrant cross, become two vertical columns on the ranking page, and become a rail divider plus footer line on the work detail page. Separate quadrant rule elements SHALL NOT remain.
 
 #### Scenario: Cover bottom rule
 
@@ -579,6 +579,9 @@ The deck SHALL contain two solid absolute rules outside the slide fade groups, c
 - **AND** each rule is longer than the content diagonal so its ends stay clipped
 - **WHEN** the deck moves to the ranking slide
 - **THEN** the rules separate into the two vertical columns
+- **WHEN** the deck moves to the work detail slide
+- **THEN** the left ranking rule stays vertical and moves from 30% to 24%
+- **AND** the right ranking rule turns clockwise into a horizontal footer line at 90%
 - **WHEN** the deck returns to the cover
 - **THEN** the rules transition back to the overlapping bottom rule
 
@@ -651,6 +654,52 @@ The ranking slide SHALL frame a right-shifted scrollable team list between the p
 - **AND** the rules move to the outer 4% / 96% columns
 - **AND** the list keeps the full remaining width
 
+### Requirement: Work detail page
+
+The work detail slide SHALL inset a vertically centred intro card in a 24% left rail, frame a dominant video in the main column, overlap an opaque work card at the right edge, and reserve a compact 10% footer. The left ranking rule SHALL stay vertical at 24%, while the right rule SHALL turn clockwise into a 90% footer line. All detail text SHALL use the serif stack. Work data SHALL render from `data/ranking.json` before mirror mount.
+
+#### Scenario: Detail composition
+
+- **WHEN** the work detail slide is active
+- **THEN** the intro card is inset in the narrow 24% rail, vertically centred, and has a transparent background and 1px border
+- **AND** the intro is narrower than the previous rail so the video frame gains the width
+- **AND** the video sits inside the main column with breathing room above, below, and to its right
+- **AND** the opaque right-hand work card overlaps the video's right edge and crosses the footer rule
+- **AND** the video and side card both remain inside the content rectangle
+
+#### Scenario: Detail typography
+
+- **WHEN** the work detail slide is rendered
+- **THEN** every label, body, team name, award, score, and button uses the serif stack
+- **AND** the footer rank mark uses two-digit zero-padded numbering (`01`, `02`, …) in the serif stack at 1.5× the previous footer scale
+- **AND** the footer award is a bordered tag at roughly 0.8× its previous type size
+- **AND** the rank mark and award tag are horizontally centred in the left rail and vertically centred, with extra right margin on the rank mark
+- **AND** no detail element falls back to the sans or mono faces
+
+#### Scenario: Detail footer
+
+- **WHEN** the work detail slide is active
+- **THEN** the footer shows the selected team's rank and award in the left rail
+- **AND** the work title is centred in the main column between two plain outline triangle buttons
+- **AND** ranks 1–3 use the accent colour for their numbers
+- **AND** an award tag uses the accent colour for its text and border
+- **AND** teams without an award keep a neutral `入围作品` tag
+
+#### Scenario: Detail work switch
+
+- **WHEN** the detail arrows are used
+- **THEN** the intro team, video count, side index, award, score, and footer title update together
+- **AND** the first work is `#1`, `镜界`, `吴彦组`, and `完成度奖`
+- **AND** switching past the last work wraps to the first
+
+#### Scenario: Narrow detail
+
+- **WHEN** the work detail slide is rendered at or below `700px`
+- **THEN** the intro, video, and footer stack vertically as 24% / 66% / 10%
+- **AND** the right-hand work card and the vertical rule are hidden
+- **AND** the footer line remains at 90% and the work switcher stays centred
+- **AND** the slide has no horizontal or vertical overflow
+
 ### Requirement: Quadrant colour filters
 
 The quadrant slide SHALL use transparent `backdrop-filter` panels with inline SVG filters for all four quadrants: red screen in the top-left, green screen in the top-right, blue screen in the bottom-left, and saturation removal in the bottom-right. The panels SHALL cover the quadrant copy, pointer, and unframed centre mark. They SHALL fade in with the slide and fade out before it hides.
@@ -703,7 +752,7 @@ The content SHALL keep the native cursor visible and draw a light-grey ring arou
 
 #### Scenario: Ring on every slide
 
-- **WHEN** the deck moves between the cover, quadrant, ranking, and info slides with the pointer inside the content
+- **WHEN** the deck moves between the cover, quadrant, ranking, and work detail slides with the pointer inside the content
 - **THEN** the ring stays visible at the pointer on the new slide
 - **AND** only the quadrant slide applies quadrant hover states
 

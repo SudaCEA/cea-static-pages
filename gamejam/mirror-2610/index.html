@@ -97,21 +97,12 @@
     min-height:0;
     height:100%;
   }
-  .slide-kicker{
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    gap:1rem;
-    padding-bottom:clamp(10px,1.8cqh,18px);
-    border-bottom:1px solid #0a0a0a;
-  }
   .micro{
     color:#0a0a0a;
     font:400 clamp(8px,.78cqw,10px)/1.35 var(--mono);
     letter-spacing:.14em;
     text-transform:uppercase;
   }
-  .slide-kicker .micro:first-child{font-variant-numeric:tabular-nums}
   /* Cover: a bottom-left type lockup with the date inline, and a blank
      triangular ellia / sideview slot at the bottom-right. There are no text
      frames; the only linework belongs to the image placeholder. */
@@ -295,6 +286,7 @@
     width:max(200cqw,200cqh);
     height:var(--cover-bar-height);
     background:#0a0a0a;
+    opacity:1;
     pointer-events:none;
     transform:translateX(-50%) rotate(0deg);
     transform-origin:center;
@@ -302,8 +294,9 @@
       top .72s cubic-bezier(.76,0,.24,1),
       left .72s cubic-bezier(.76,0,.24,1),
       height .72s cubic-bezier(.76,0,.24,1),
+      opacity .42s ease,
       transform .72s cubic-bezier(.76,0,.24,1);
-    will-change:top,left,height,transform;
+    will-change:top,left,height,opacity,transform;
   }
   .art[data-rule-mode="cross"] .sheet-rule{
     top:50%;
@@ -320,6 +313,22 @@
   }
   .art[data-rule-mode="rank"] .sheet-rule-a{left:30%}
   .art[data-rule-mode="rank"] .sheet-rule-b{left:90%}
+  .art[data-rule-mode="detail"] .sheet-rule{
+    height:3px;
+    transform:translate(-50%,-50%) rotate(90deg);
+  }
+  /* The left ranking rule stays vertical and moves in to the narrower rail;
+     the right rule turns into the compact footer line. */
+  .art[data-rule-mode="detail"] .sheet-rule-a{
+    top:50%;
+    left:24%;
+  }
+  .art[data-rule-mode="detail"] .sheet-rule-b{
+    top:90%;
+    left:50%;
+    /* 90deg -> 180deg: keep the line horizontal while turning clockwise. */
+    transform:translate(-50%,-50%) rotate(180deg);
+  }
 
   /* A light-grey ring around the native cursor on every slide. It is a
      direct child of the deck and sits below every slide, so the quadrant
@@ -602,107 +611,332 @@
     text-align:center;
   }
 
-  .slide-foot{
+  /* Work detail page: a narrow intro rail, a dominant video frame, and an
+     overlapping right-hand work card. The compact footer carries the award
+     and the work switcher. The persistent rules supply the 24% rail divider
+     and the 90% footer line, so the page itself adds no full-width rules. */
+  .slide-detail{
+    padding:0;
+    overflow:hidden;
+  }
+  .detail-layout{
+    position:absolute;
+    inset:0;
+    display:grid;
+    grid-template-columns:24% minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr) 10%;
+    min-width:0;
+    min-height:0;
+  }
+  .detail-intro{
+    grid-column:1;
+    grid-row:1;
+    min-width:0;
+    min-height:0;
+    padding:clamp(10px,3.4cqh,30px) clamp(12px,2.8cqw,34px);
+  }
+  .detail-intro-card{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:clamp(14px,2.8cqh,26px);
+    width:100%;
+    height:100%;
+    padding:clamp(16px,3.8cqh,34px) clamp(14px,2.4cqw,28px);
+    border:1px solid #0a0a0a;
+    background:transparent;
+  }
+  .detail-intro-copy{
+    display:grid;
+    gap:clamp(12px,2.2cqh,20px);
+    min-width:0;
+  }
+  .detail-intro-title{
+    margin:0;
+    font:500 clamp(22px,2.5cqw,36px)/1.05 var(--serif);
+    letter-spacing:-.035em;
+  }
+  .detail-intro-body{
+    max-width:100%;
+    margin:0;
+    color:rgba(10,10,10,.78);
+    font:400 clamp(11px,.95cqw,14px)/1.72 var(--serif);
+    letter-spacing:.01em;
+    text-wrap:balance;
+  }
+  .detail-intro-meta{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    min-width:0;
+    padding-top:clamp(9px,1.6cqh,14px);
+    border-top:1px solid rgba(10,10,10,.28);
+  }
+  .detail-intro-team{
+    overflow:hidden;
+    max-width:65%;
+    font:500 clamp(11px,.95cqw,14px)/1.3 var(--serif);
+    text-align:right;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .detail-main{
+    position:relative;
+    grid-column:2;
+    grid-row:1;
+    min-width:0;
+    min-height:0;
+  }
+  .detail-video{
+    position:absolute;
+    top:13.4%;
+    right:7%;
+    bottom:13.4%;
+    left:2.7%;
+    display:grid;
+    place-items:center;
+    margin:0;
+    border:1px solid #0a0a0a;
+    background:transparent;
+    overflow:hidden;
+  }
+  .detail-video-top,
+  .detail-video-foot{
+    position:absolute;
+    right:clamp(12px,2.2cqw,28px);
+    left:clamp(12px,2.2cqw,28px);
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    color:rgba(10,10,10,.62);
+  }
+  .detail-video-top{top:clamp(10px,2cqh,18px)}
+  .detail-video-foot{bottom:clamp(10px,2cqh,18px)}
+  .detail-video-mark{
+    display:grid;
+    place-items:center;
+    gap:clamp(8px,1.4cqh,13px);
+    text-align:center;
+  }
+  .detail-video-word{
+    font:500 clamp(26px,3.5cqw,52px)/1 var(--serif);
+    letter-spacing:-.035em;
+  }
+  .detail-video-sub{
+    color:rgba(10,10,10,.48);
+    font:400 clamp(8px,.8cqw,10px)/1.4 var(--serif);
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+
+  .detail-side{
+    position:absolute;
+    top:24.5%;
+    right:1.8%;
+    z-index:2;
+    display:flex;
+    flex-direction:column;
+    width:23.2%;
+    height:82.5%;
+    min-height:0;
+    border:1px solid #0a0a0a;
+    background:#ffffff;
+  }
+  .detail-side-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:8px;
+    padding:clamp(10px,1.8cqh,18px) clamp(10px,1.2cqw,16px);
+    border-bottom:1px solid rgba(10,10,10,.24);
+  }
+  .detail-side-figure{
     display:flex;
     align-items:flex-end;
+    flex:1;
+    min-height:0;
+    padding:clamp(12px,2.4cqh,24px) clamp(8px,1.2cqw,16px);
+  }
+  .detail-side-index{
+    color:#0a0a0a;
+    font:600 clamp(64px,10.2cqw,136px)/.74 var(--serif);
+    letter-spacing:-.08em;
+    font-variant-numeric:tabular-nums;
+  }
+  .detail-side-index.is-podium{color:var(--red)}
+  .detail-side-awards{
+    display:grid;
+    justify-items:start;
+    gap:clamp(4px,.8cqh,7px);
+    margin:0 clamp(8px,1cqw,14px) clamp(9px,1.5cqh,13px);
+  }
+  .detail-side-award{
+    display:inline-block;
+    overflow:hidden;
+    max-width:100%;
+    padding:clamp(3px,.6cqh,5px) clamp(6px,1cqw,10px);
+    border:1px solid rgba(10,10,10,.42);
+    color:rgba(10,10,10,.66);
+    font:600 clamp(13px,1.65cqw,22px)/1.2 var(--serif);
+    letter-spacing:.02em;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .detail-side-award.is-award{
+    border-color:var(--red);
+    color:var(--red);
+  }
+  .detail-side-meta{
+    overflow:hidden;
+    color:rgba(10,10,10,.52);
+    font:400 clamp(9px,.8cqw,11px)/1.35 var(--serif);
+    letter-spacing:.08em;
+    text-overflow:ellipsis;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .detail-cta{
+    display:flex;
+    align-items:center;
     justify-content:space-between;
-    gap:16px;
-    padding-top:clamp(10px,1.8cqh,18px);
+    gap:8px;
+    min-height:20.5%;
+    padding:clamp(10px,1.8cqh,18px) clamp(10px,1.2cqw,16px);
     border-top:1px solid #0a0a0a;
+    pointer-events:none;
   }
-  .slide-foot .micro:last-child{text-align:right}
-  .slide-content{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    gap:clamp(18px,3.2cqh,32px);
-    padding:clamp(20px,3.8cqh,48px) 0;
-    min-height:0;
-  }
-  .headline{
-    max-width:22ch;
-    margin:0;
-    font:600 clamp(28px,4.5cqw,60px)/1.08 var(--sans);
-    letter-spacing:-.045em;
-  }
-  .body-copy{
-    max-width:48ch;
-    margin:0;
-    font:400 clamp(13px,1.2cqw,16px)/1.78 var(--sans);
-    letter-spacing:.01em;
-  }
-  .split{
-    flex:1;
+  .detail-cta-copy{
     display:grid;
-    grid-template-columns:minmax(0,1.3fr) minmax(210px,.7fr);
-    align-items:start;
-    gap:clamp(28px,5cqw,74px);
-    padding:clamp(22px,4cqh,48px) 0;
-    min-height:0;
-  }
-  .split-main{
-    display:flex;
-    flex-direction:column;
-    gap:clamp(18px,3cqh,30px);
-  }
-  .side-list{
-    border-top:1px solid #0a0a0a;
-  }
-  .side-list div{
-    display:grid;
-    grid-template-columns:2.4em minmax(0,1fr) auto;
-    gap:12px;
-    align-items:baseline;
-    padding:clamp(9px,1.6cqh,14px) 0;
-    border-bottom:1px solid #0a0a0a;
-  }
-  .side-list strong{
-    font:400 clamp(14px,1.35cqw,17px)/1.3 var(--sans);
-    font-weight:500;
-  }
-  .steps{
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:clamp(16px,2.8cqw,34px);
-  }
-  .step{
+    gap:clamp(4px,.7cqh,7px);
     min-width:0;
-    padding-top:12px;
-    border-top:1px solid #0a0a0a;
   }
-  .step h3{
-    margin:8px 0 10px;
-    font:500 clamp(17px,1.8cqw,24px)/1.2 var(--sans);
-    letter-spacing:-.02em;
+  .detail-cta-title{
+    overflow:hidden;
+    font:500 clamp(12px,1.3cqw,16px)/1.15 var(--serif);
+    letter-spacing:-.01em;
+    text-overflow:ellipsis;
+    white-space:nowrap;
   }
-  .step p{
-    margin:0;
-    font:400 clamp(12px,1.05cqw,14px)/1.65 var(--sans);
+  .detail-cta-sub{
+    overflow:hidden;
+    color:rgba(10,10,10,.48);
+    font:400 clamp(7px,.66cqw,9px)/1.2 var(--serif);
+    letter-spacing:.1em;
+    text-overflow:ellipsis;
+    text-transform:uppercase;
+    white-space:nowrap;
   }
-  .info-grid{
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:0 clamp(24px,4cqw,60px);
-    border-top:1px solid #0a0a0a;
+  .detail-cta-arrow{
+    flex:0 0 auto;
+    width:clamp(9px,.85cqw,12px);
+    height:clamp(18px,1.7cqw,24px);
   }
-  .info-grid div{
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    gap:16px;
-    padding:clamp(9px,1.8cqh,14px) 0;
-    border-bottom:1px solid #0a0a0a;
-  }
-  .info-grid strong{
-    font:400 clamp(13px,1.2cqw,16px)/1.35 var(--sans);
-    font-weight:500;
-    text-align:right;
-  }
-  .end-mark{
+  .detail-cta-arrow svg{
     display:block;
-    width:clamp(6px,.7cqw,9px);
-    height:clamp(6px,.7cqw,9px);
-    background:#0a0a0a;
+    width:100%;
+    height:100%;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.5;
+    vector-effect:non-scaling-stroke;
+  }
+
+  .detail-footer{
+    grid-column:1/-1;
+    grid-row:2;
+    display:grid;
+    grid-template-columns:24% minmax(0,1fr);
+    align-items:center;
+    min-width:0;
+    min-height:0;
+    padding:0;
+  }
+  .detail-award{
+    display:flex;
+    align-items:center;
+    justify-self:center;
+    gap:clamp(4px,.55cqw,8px);
+    max-width:100%;
+    min-width:0;
+    padding-left:0;
+  }
+  .detail-award-rank{
+    margin-right:clamp(3px,.4cqw,5px);
+    color:#0a0a0a;
+    font:700 clamp(22px,3cqw,39px)/1 var(--serif);
+    letter-spacing:-.04em;
+    font-variant-numeric:tabular-nums;
+  }
+  .detail-award.is-podium .detail-award-rank{color:var(--red)}
+  .detail-award-name{
+    display:inline-block;
+    overflow:hidden;
+    min-width:0;
+    padding:clamp(2px,.35cqh,4px) clamp(5px,.7cqw,8px);
+    border:1px solid rgba(10,10,10,.42);
+    color:rgba(10,10,10,.66);
+    font:500 clamp(14px,1.68cqw,22px)/1.15 var(--serif);
+    letter-spacing:-.01em;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .detail-award.is-award .detail-award-name{
+    border-color:var(--red);
+    color:var(--red);
+  }
+  .detail-switcher{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:clamp(26px,6.8cqw,82px);
+    min-width:0;
+  }
+  .detail-switch-button{
+    display:grid;
+    place-items:center;
+    flex:0 0 auto;
+    width:clamp(24px,2.8cqw,38px);
+    height:clamp(30px,4.2cqw,56px);
+    padding:0;
+    border:0;
+    background:transparent;
+    color:#0a0a0a;
+    cursor:pointer;
+  }
+  .detail-switch-button svg{
+    display:block;
+    width:clamp(10px,1.4cqw,18px);
+    height:clamp(22px,3.6cqw,44px);
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.5;
+    vector-effect:non-scaling-stroke;
+    transition:transform .18s ease;
+  }
+  .detail-switch-button:hover:not(:disabled) svg{transform:translateX(-2px)}
+  .detail-switch-button:last-child:hover:not(:disabled) svg{transform:translateX(2px)}
+  .detail-switch-button:disabled{opacity:.26;cursor:default}
+  .detail-switch-button:focus-visible{
+    outline:1px solid #0a0a0a;
+    outline-offset:3px;
+  }
+  .detail-work{
+    overflow:hidden;
+    max-width:44cqw;
+    margin:0;
+    font:500 clamp(19px,2.55cqw,34px)/1.15 var(--serif);
+    letter-spacing:-.025em;
+    text-align:center;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .slide-detail .micro{
+    font-family:var(--serif);
+    letter-spacing:.09em;
   }
 
   .deck-controls{
@@ -759,6 +993,10 @@
       gap:6px;
     }
     .rank-criteria{gap:4px 14px}
+    .detail-side{right:1.5%}
+    .detail-side-index{font-size:clamp(56px,9.2cqw,104px)}
+    .detail-cta-title{font-size:clamp(11px,1.2cqw,14px)}
+    .detail-switcher{gap:clamp(20px,4.4cqw,56px)}
   }
 
   @media (max-width:700px){
@@ -776,8 +1014,6 @@
     .cover-date{font-size:clamp(11px,3.8cqw,18px)}
     .cover-title{font-size:clamp(30px,12.2cqw,60px)}
     .cover-side{width:62%;max-width:320px;justify-self:end}
-    .headline{font-size:clamp(25px,6.8cqw,40px)}
-    .slide-foot .micro{font-size:7px;letter-spacing:.08em}
     .slide-quadrants{padding:0}
     .quadrant-stage{
       --quadrant-shift-x:clamp(5px,2.4cqw,18px);
@@ -822,27 +1058,63 @@
     .rank-criterion{font-size:10px}
     .rank-metrics{gap:7px}
     .rank-score{font-size:28px}
-    .info-grid{grid-template-columns:1fr}
-    .split{
-      grid-template-columns:1fr;
-      gap:clamp(18px,3.2cqh,30px);
-      padding:18px 0;
+    .slide-detail{padding:0}
+    .detail-layout{
+      grid-template-columns:minmax(0,1fr);
+      grid-template-rows:24% 66% 10%;
     }
-    .side-list div{padding:9px 0}
-    .steps{
-      grid-template-columns:1fr;
+    .detail-intro{grid-column:1;grid-row:1;padding:8px 12px}
+    .detail-intro-card{
+      gap:7px;
+      padding:10px 16px;
+    }
+    .detail-intro-copy{gap:4px}
+    .detail-intro-title{font-size:clamp(19px,5.6cqw,25px)}
+    .detail-intro-body{
+      display:-webkit-box;
+      overflow:hidden;
+      max-width:100%;
+      font-size:10.5px;
+      line-height:1.45;
+      -webkit-box-orient:vertical;
+      -webkit-line-clamp:2;
+    }
+    .detail-intro-meta{padding-top:5px}
+    .detail-intro-team{max-width:70%;font-size:9px}
+    .detail-main{grid-column:1;grid-row:2}
+    .detail-video{
+      top:6px;
+      right:12px;
+      bottom:6px;
+      left:12px;
+    }
+    .detail-video-top{top:8px;right:10px;left:10px}
+    .detail-video-foot{right:10px;bottom:8px;left:10px}
+    .detail-video-word{font-size:clamp(24px,7.2cqw,32px)}
+    .detail-video-sub{font-size:7px}
+    .detail-side{display:none}
+    .art[data-rule-mode="detail"] .sheet-rule-a{opacity:0}
+    .detail-footer{
+      grid-column:1;
+      grid-row:3;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
       gap:0;
+      padding:2px 12px;
     }
-    .step{
-      display:grid;
-      grid-template-columns:2.2em minmax(0,1fr);
-      column-gap:10px;
-      padding:9px 0;
+    .detail-award{padding-left:0}
+    .detail-award-rank{font-size:22px}
+    .detail-award-name{font-size:14px}
+    .detail-switcher{
+      justify-content:center;
+      width:100%;
+      gap:clamp(10px,3.4cqw,18px);
     }
-    .step .micro{grid-row:span 2;padding-top:2px}
-    .step h3{margin:0 0 4px;font-size:16px}
-    .step p{font-size:12px}
-    .slide-foot{padding-top:9px}
+    .detail-switch-button{width:24px;height:30px}
+    .detail-switch-button svg{width:10px;height:20px}
+    .detail-work{max-width:70cqw;font-size:clamp(18px,5.4cqw,23px)}
   }
   @media (max-width:560px){
     .deck-controls{padding:12px}
@@ -1473,25 +1745,82 @@
           </div>
         </section>
 
-        <section class="slide" data-slide="3" aria-roledescription="slide" aria-label="信息" aria-hidden="true">
-          <div class="slide-inner">
-            <header class="slide-kicker" data-fade data-fade-in-delay="0" data-fade-out-delay="60">
-              <span class="micro">03 / Info</span>
-              <span class="micro">MIRROR / 2610</span>
-            </header>
-            <div class="slide-content">
-              <h2 class="headline" data-fade data-fade-in-delay="40" data-fade-out-delay="45">进入镜像。</h2>
-              <p class="body-copy" data-fade data-fade-in-delay="100" data-fade-out-delay="30">这是一个可以在浏览器里直接观看的反射实验。没有目标，也没有隐藏关卡。你可以用滚轮或顶部的箭头继续。</p>
-              <div class="info-grid">
-                <div data-fade data-fade-in-delay="130" data-fade-out-delay="40"><span class="micro">Format</span><strong>Interactive study</strong></div>
-                <div data-fade data-fade-in-delay="170" data-fade-out-delay="30"><span class="micro">Surface</span><strong>Canvas + DOM</strong></div>
-                <div data-fade data-fade-in-delay="210" data-fade-out-delay="20"><span class="micro">Year</span><strong>2026</strong></div>
-                <div data-fade data-fade-in-delay="250" data-fade-out-delay="10"><span class="micro">Entry</span><strong>Mirror / 2610</strong></div>
+        <section class="slide slide-detail" data-slide="3" aria-roledescription="slide" aria-label="作品详情" aria-hidden="true">
+          <div class="detail-layout">
+            <aside class="detail-intro" data-fade data-fade-in-delay="0" data-fade-out-delay="60">
+              <div class="detail-intro-card">
+                <div class="detail-intro-copy">
+                  <span class="micro">03 / Work</span>
+                  <h2 class="detail-intro-title">作品介绍</h2>
+                  <p class="detail-intro-body">每件作品都从“镜”出发。创作说明与队伍自述将在这里展开。</p>
+                </div>
+                <div class="detail-intro-meta">
+                  <span class="micro">Team</span>
+                  <strong class="detail-intro-team" id="detailTeam">吴彦组</strong>
+                </div>
               </div>
+            </aside>
+
+            <div class="detail-main">
+              <figure class="detail-video" data-fade data-fade-in-delay="45" data-fade-out-delay="45" aria-label="作品视频占位">
+                <div class="detail-video-top">
+                  <span class="micro">Demo Reel</span>
+                  <span class="micro" id="detailVideoCount">01 / 15</span>
+                </div>
+                <div class="detail-video-mark">
+                  <span class="detail-video-word">Video Panel</span>
+                  <span class="detail-video-sub">视频待接入 / Coming soon</span>
+                </div>
+                <figcaption class="detail-video-foot">
+                  <span class="micro">MIRROR / 2610</span>
+                  <span class="micro">16:9</span>
+                </figcaption>
+              </figure>
+
+              <aside class="detail-side" data-fade data-fade-in-delay="90" data-fade-out-delay="30" aria-label="作品信息">
+                <div class="detail-side-head">
+                  <span class="micro">Featured</span>
+                  <span class="micro" id="detailSideCount">01</span>
+                </div>
+                <div class="detail-side-figure">
+                  <span class="detail-side-index is-podium" id="detailIndex">01</span>
+                </div>
+                <div class="detail-side-awards">
+                  <span class="detail-side-award is-award" id="detailAward">完成度奖</span>
+                  <span class="detail-side-meta" id="detailAwardMeta">完成度 / 8.65</span>
+                </div>
+                <div class="detail-cta" aria-hidden="true">
+                  <span class="detail-cta-copy">
+                    <span class="detail-cta-title">查看作品</span>
+                    <span class="detail-cta-sub">View entry</span>
+                  </span>
+                  <span class="detail-cta-arrow">
+                    <svg viewBox="0 0 12 24" aria-hidden="true" focusable="false">
+                      <path d="M2 2 10 12 2 22"/>
+                    </svg>
+                  </span>
+                </div>
+              </aside>
             </div>
-            <footer class="slide-foot" data-fade data-fade-in-delay="290" data-fade-out-delay="0">
-              <span class="micro">Gamejam / 2026</span>
-              <span class="micro">End / 04</span>
+
+            <footer class="detail-footer" data-fade data-fade-in-delay="135" data-fade-out-delay="0">
+              <div class="detail-award is-award is-podium">
+                <span class="detail-award-rank" id="detailAwardRank">01</span>
+                <span class="detail-award-name" id="detailFooterAward">完成度奖</span>
+              </div>
+              <div class="detail-switcher">
+                <button class="detail-switch-button" id="detailPrev" type="button" aria-label="上一件作品">
+                  <svg viewBox="0 0 12 24" aria-hidden="true" focusable="false">
+                    <path d="M10 2 2 12 10 22Z"/>
+                  </svg>
+                </button>
+                <h2 class="detail-work" id="detailWork" aria-live="polite">镜界</h2>
+                <button class="detail-switch-button" id="detailNext" type="button" aria-label="下一件作品">
+                  <svg viewBox="0 0 12 24" aria-hidden="true" focusable="false">
+                    <path d="M2 2 10 12 2 22Z"/>
+                  </svg>
+                </button>
+              </div>
             </footer>
           </div>
         </section>
@@ -1683,6 +2012,7 @@
   const DECK_WHEEL_LOCK_MS = 850;
   const QUADRANT_SLIDE = 1;
   const RANK_SLIDE = 2;
+  const DETAIL_SLIDE = 3;
   const QUADRANT_RING_MIN_SIZE = 34;
   const QUADRANT_RING_MAX_SIZE = 82;
   const QUADRANT_RING_MAX_STROKE = 5.5;
@@ -1705,6 +2035,7 @@
   let parallax = null;
   let quadrantPage = null;
   let rankPage = null;
+  let detailPage = null;
   let rankingData = null;
   const RANKING_DATA_URL = new URL('data/ranking.json', document.baseURI);
 
@@ -1828,6 +2159,8 @@
       art.dataset.ruleMode = 'bar';
     } else if (index === RANK_SLIDE) {
       art.dataset.ruleMode = 'rank';
+    } else if (index === DETAIL_SLIDE) {
+      art.dataset.ruleMode = 'detail';
     } else {
       art.dataset.ruleMode = 'cross';
     }
@@ -2688,6 +3021,101 @@
     };
   }
 
+  function initDetailPage() {
+    const root = document.querySelector('#deck .slide-detail');
+    if (!root) return null;
+
+    const nodes = {
+      team: document.getElementById('detailTeam'),
+      work: document.getElementById('detailWork'),
+      videoCount: document.getElementById('detailVideoCount'),
+      sideCount: document.getElementById('detailSideCount'),
+      index: document.getElementById('detailIndex'),
+      award: document.getElementById('detailAward'),
+      awardMeta: document.getElementById('detailAwardMeta'),
+      awardGroup: root.querySelector('.detail-award'),
+      awardRank: document.getElementById('detailAwardRank'),
+      footerAward: document.getElementById('detailFooterAward'),
+      prev: document.getElementById('detailPrev'),
+      next: document.getElementById('detailNext')
+    };
+    if (Object.values(nodes).some((node) => !node)) return null;
+
+    const teams = Array.isArray(rankingData?.teams) ? rankingData.teams : [];
+    const awardTitles = new Map(
+      (Array.isArray(rankingData?.awards) ? rankingData.awards : [])
+        .map((award) => [award.id, award.title])
+    );
+    const criterionLabels = new Map(
+      (Array.isArray(rankingData?.scoring?.criteria) ? rankingData.scoring.criteria : [])
+        .map((criterion) => [criterion.id, criterion.label])
+    );
+    let activeIndex = 0;
+
+    function padded(value) {
+      return String(value).padStart(2, '0');
+    }
+
+    function apply(team) {
+      if (!team) return;
+      const workTitle = team.workTitle || '未提供作品名';
+      const teamName = team.teamName || '未知队伍';
+      const awardId = Array.isArray(team.awards) ? team.awards[0] : null;
+      const hasAward = Boolean(awardId);
+      const awardTitle = hasAward
+        ? (awardTitles.get(awardId) || awardId)
+        : '入围作品';
+      const awardScore = hasAward
+        ? team.scores?.[awardId]
+        : team.overallScore;
+      const awardLabel = hasAward
+        ? (criterionLabels.get(awardId) || awardTitle)
+        : '综合评分';
+      const podium = Number.isInteger(team.rank) && team.rank <= 3;
+      const rank = Number.isInteger(team.rank) ? padded(team.rank) : '—';
+
+      nodes.team.textContent = teamName;
+      nodes.work.textContent = workTitle;
+      nodes.videoCount.textContent = `${padded(activeIndex + 1)} / ${padded(teams.length)}`;
+      nodes.sideCount.textContent = padded(activeIndex + 1);
+      nodes.index.textContent = padded(activeIndex + 1);
+      nodes.index.classList.toggle('is-podium', podium);
+      nodes.award.textContent = awardTitle;
+      nodes.award.classList.toggle('is-award', hasAward);
+      nodes.awardGroup.classList.toggle('is-award', hasAward);
+      nodes.awardGroup.classList.toggle('is-podium', podium);
+      nodes.awardMeta.textContent = `${awardLabel} / ${rankScoreText(awardScore)}`;
+      nodes.awardRank.textContent = rank;
+      nodes.footerAward.textContent = awardTitle;
+      root.dataset.teamId = String(team.teamId ?? '');
+      root.setAttribute('aria-label', `作品详情：${workTitle}`);
+    }
+
+    function step(delta) {
+      if (teams.length < 2) return;
+      activeIndex = (activeIndex + delta + teams.length) % teams.length;
+      apply(teams[activeIndex]);
+    }
+
+    nodes.prev.addEventListener('click', () => step(-1));
+    nodes.next.addEventListener('click', () => step(1));
+    const canSwitch = teams.length > 1;
+    nodes.prev.disabled = !canSwitch;
+    nodes.next.disabled = !canSwitch;
+    if (teams.length) apply(teams[activeIndex]);
+
+    return {
+      getState: () => ({
+        index: activeIndex,
+        count: teams.length,
+        teamId: teams[activeIndex]?.teamId ?? null,
+        workTitle: teams[activeIndex]?.workTitle ?? null
+      }),
+      next: () => step(1),
+      previous: () => step(-1)
+    };
+  }
+
   const rankingDataPromise = loadRankingData();
 
   function applySurface() {
@@ -2942,6 +3370,7 @@
     get parallax() { return parallax; },
     get quadrant() { return quadrantPage; },
     get rank() { return rankPage; },
+    get detail() { return detailPage; },
     get rankingData() { return rankingData; },
     deck: deckApi,
     get preflight() { return preflight; },
@@ -3296,6 +3725,7 @@
     quadrantPage = initQuadrantPage();
     quadrantPage?.sync();
     rankPage = initRankPage();
+    detailPage = initDetailPage();
 
     let three;
     try {
