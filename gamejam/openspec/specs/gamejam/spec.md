@@ -426,13 +426,20 @@ If a Canvas 2D context cannot be created, the page SHALL keep a static CSS conte
 
 ### Requirement: Reusable parallax module
 
-The project SHALL provide a shared parallax module that reads each layer's `data-parallax` depth, updates only layer transforms, settles to idle, and cleans up on destroy. `mirror-2610` SHALL mount it on the quadrant and ranking slides, with distinct depths for quadrant copy and ranking board/cards, and SHALL scale its displacement down on narrow viewports.
+The project SHALL provide a shared parallax module that reads each layer's `data-parallax` depth, updates only layer transforms, settles to idle, and cleans up on destroy. `mirror-2610` SHALL mount it on the cover, quadrant, and ranking slides, with distinct depths for the cover text, quadrant copy, and ranking board/cards; the two ranking labels SHALL share one depth. It SHALL scale its displacement down on narrow viewports.
 
 #### Scenario: Depth declaration
 
 - **WHEN** the module is initialized with `data-parallax` layers
 - **THEN** each layer's depth is read from its attribute
 - **AND** a missing or invalid depth leaves that layer fixed
+
+#### Scenario: Cover depth layers
+
+- **WHEN** the cover slide is inspected
+- **THEN** `CEA GameJam`, `2026.10`, and `参赛作品展示` each carry a `data-parallax` depth
+- **AND** the three depths are distinct
+- **AND** only those text elements translate
 
 #### Scenario: Quadrant depth layers
 
@@ -445,6 +452,7 @@ The project SHALL provide a shared parallax module that reads each layer's `data
 
 - **WHEN** the ranking slide is inspected
 - **THEN** the board and cards carry `data-parallax` depths
+- **AND** both left-rail labels carry the same `data-parallax` depth
 - **AND** hovering a card raises only that card to a nearer depth
 - **AND** leaving the card restores its base depth
 
@@ -559,7 +567,7 @@ The deck SHALL contain two solid absolute rules outside the slide fade groups, c
 #### Scenario: Ranking columns
 
 - **WHEN** the ranking slide is active
-- **THEN** the two rules stand vertically at 20% and 80% of the content width
+- **THEN** the two rules stand vertically at 30% and 90% of the content width
 - **AND** both use a 3px thickness
 - **AND** the ranking list occupies the 60% column between them
 
@@ -576,7 +584,7 @@ The deck SHALL contain two solid absolute rules outside the slide fade groups, c
 
 ### Requirement: Ranking page
 
-The ranking slide SHALL frame a central scrollable team list between the persistent rules, with vertical serif labels outside. The list SHALL be inset from the rules, suppress horizontal scrolling, and scroll vertically without deck navigation. Card depth SHALL follow pointer hover only.
+The ranking slide SHALL frame a right-shifted scrollable team list between the persistent rules, with a large primary `评分排行` label and a smaller `Rank list` subtitle stacked in a left rail. Cards SHALL render from `data/ranking.json` with ranks, awards, work titles, team names, criterion scores, and overall scores. The list SHALL suppress horizontal scrolling and scroll vertically without deck navigation. Card depth SHALL follow pointer hover only.
 
 #### Scenario: Framed list
 
@@ -584,8 +592,40 @@ The ranking slide SHALL frame a central scrollable team list between the persist
 - **THEN** the list column sits between the two vertical rules
 - **AND** the scrollable list is inset from both rules
 - **AND** the ranking slide does not clip cards at its own edges
-- **AND** the side labels are vertical
+- **AND** `评分排行` and `Rank list` sit horizontally in one left rail
+- **AND** `评分排行` is the larger primary label and `Rank list` is a smaller tracked subtitle
+- **AND** the rail is vertically centred and inset from the content edge
+- **AND** the two labels are stacked with a gap and neither crosses the left rule
+- **AND** both labels share the same parallax depth
 - **AND** every team card has a transparent background and a 1px black border
+- **AND** the card's rank/award cluster has no extra border
+
+#### Scenario: Ranking data cards
+
+- **WHEN** the ranking slide is active
+- **THEN** the list renders one card per team from `data/ranking.json`, in rank order
+- **AND** the left cluster stacks `#` plus the rank number and one tag per won award
+- **AND** the centre shows the work title above the team name
+- **AND** the right side shows a 2×2 grid of criterion labels and averages plus the overall score
+- **AND** the top-ranked card reads `#1`, `镜界`, `吴彦组`, and `7.93`
+- **AND** tied teams show the same rank number and a `并列` marker
+
+#### Scenario: Ranking accent hierarchy
+
+- **WHEN** the ranking cards are rendered
+- **THEN** ranks 1–3 use the accent colour for their rank numbers
+- **AND** the first-place overall score uses the accent colour
+- **AND** award tags use the accent colour for text and border
+- **AND** the criterion cell corresponding to a won award uses the accent colour for its label and value
+- **AND** non-award criteria and the other overall scores remain neutral
+
+#### Scenario: Compact ranking cards
+
+- **WHEN** the ranking slide is rendered at or below `1120px`
+- **THEN** the card header and the score breakdown stack into two rows
+- **AND** the score remains below the criterion grid, aligned to the right
+- **WHEN** the ranking slide is rendered at or below `700px`
+- **THEN** the left-rail labels are hidden
 
 #### Scenario: List scrolling
 
@@ -606,8 +646,8 @@ The ranking slide SHALL frame a central scrollable team list between the persist
 
 #### Scenario: Narrow ranking
 
-- **WHEN** the ranking slide is rendered on a narrow viewport
-- **THEN** the side labels are hidden
+- **WHEN** the ranking slide is rendered at or below `700px`
+- **THEN** the left-rail labels are hidden
 - **AND** the rules move to the outer 4% / 96% columns
 - **AND** the list keeps the full remaining width
 

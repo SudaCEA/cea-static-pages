@@ -318,8 +318,8 @@
     height:3px;
     transform:translate(-50%,-50%) rotate(90deg);
   }
-  .art[data-rule-mode="rank"] .sheet-rule-a{left:20%}
-  .art[data-rule-mode="rank"] .sheet-rule-b{left:80%}
+  .art[data-rule-mode="rank"] .sheet-rule-a{left:30%}
+  .art[data-rule-mode="rank"] .sheet-rule-b{left:90%}
 
   /* A light-grey ring around the native cursor on every slide. It is a
      direct child of the deck and sits below every slide, so the quadrant
@@ -409,39 +409,48 @@
     will-change:transform;
   }
 
-  /* Ranking page: two vertical sheet rules frame a scrolling list. */
+  /* Ranking page: two vertical sheet rules frame a right-shifted scrolling
+     list; both titles share a vertically centred left rail. */
   .slide-rank{
     padding:0;
     overflow:visible;
   }
   .rank-layout{
     display:grid;
-    grid-template-columns:20% 60% 20%;
+    grid-template-columns:30% 60% 10%;
     width:100%;
     height:100%;
     min-height:0;
   }
   .rank-side{
-    display:grid;
-    place-items:center;
-    min-width:0;
-    min-height:0;
-    padding:clamp(14px,2.4cqw,30px);
+    position:absolute;
+    top:50%;
+    left:clamp(18px,3cqw,40px);
+    z-index:2;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:clamp(10px,1.8cqh,16px);
+    margin:0;
+    padding:0;
+    color:#0a0a0a;
+    pointer-events:none;
+    translate:0 -50%;
   }
-  .rank-side-left{grid-column:1;grid-row:1}
   .rank-board{grid-column:2;grid-row:1}
-  .rank-side-right{grid-column:3;grid-row:1}
   .rank-side-title{
     margin:0;
-    writing-mode:vertical-rl;
-    text-orientation:mixed;
-    font:600 clamp(28px,4.3cqw,62px)/1 var(--serif);
-    letter-spacing:.06em;
     white-space:nowrap;
   }
-  .rank-side-left .rank-side-title{
-    text-orientation:upright;
+  .rank-side-title-main{
+    font:600 clamp(28px,5.8cqw,76px)/1 var(--serif);
+    letter-spacing:-.02em;
+  }
+  .rank-side-title-sub{
+    color:rgba(10,10,10,.62);
+    font:400 clamp(14px,1.9cqw,22px)/1 var(--serif);
     letter-spacing:.16em;
+    text-transform:uppercase;
   }
   .rank-board{
     height:100%;
@@ -471,11 +480,11 @@
     position:relative;
     z-index:0;
     display:grid;
-    grid-template-columns:auto minmax(0,1fr) auto;
+    grid-template-columns:clamp(58px,7cqw,88px) minmax(0,1fr) clamp(184px,19cqw,230px);
     align-items:center;
-    gap:clamp(9px,1.2cqw,16px);
-    min-height:clamp(76px,12.4cqh,112px);
-    padding:clamp(12px,1.8cqh,18px) clamp(14px,1.8cqw,24px);
+    gap:clamp(10px,1.5cqw,20px);
+    min-height:clamp(108px,16.8cqh,136px);
+    padding:clamp(15px,2.1cqh,20px) clamp(14px,1.8cqw,22px);
     border:1px solid #0a0a0a;
     background:transparent;
     scale:1;
@@ -489,39 +498,108 @@
       box-shadow:0 0 0 1px #0a0a0a;
     }
   }
-  .rank-number{
-    align-self:start;
-    padding-top:.2em;
-    color:rgba(10,10,10,.5);
-    font:400 clamp(8px,.75cqw,10px)/1 var(--mono);
-    letter-spacing:.1em;
-    font-variant-numeric:tabular-nums;
-  }
-  .rank-copy{
-    display:grid;
+  .rank-rank{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
     gap:5px;
     min-width:0;
   }
-  .rank-team{
-    overflow:hidden;
-    font:600 clamp(18px,2cqw,30px)/1.05 var(--serif);
-    letter-spacing:-.02em;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .rank-members{
-    overflow:hidden;
-    color:rgba(10,10,10,.56);
-    font:400 clamp(9px,.82cqw,11px)/1.3 var(--mono);
-    letter-spacing:.08em;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .rank-score{
-    align-self:end;
-    font:500 clamp(16px,1.7cqw,24px)/1 var(--serif);
+  .rank-number{
+    color:#0a0a0a;
+    font:700 clamp(28px,2.8cqw,42px)/.9 var(--sans);
+    letter-spacing:-.055em;
     font-variant-numeric:tabular-nums;
     white-space:nowrap;
+  }
+  .rank-card.is-podium .rank-number{color:var(--red)}
+  .rank-tie{
+    color:rgba(10,10,10,.48);
+    font:400 clamp(8px,.68cqw,10px)/1 var(--mono);
+    letter-spacing:.12em;
+  }
+  .rank-awards{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:4px;
+    margin-top:2px;
+  }
+  .rank-award{
+    display:inline-block;
+    padding:2px 6px;
+    border:1px solid var(--red);
+    color:var(--red);
+    font:600 clamp(11px,1.1cqw,13px)/1.25 var(--sans);
+    letter-spacing:.04em;
+    white-space:nowrap;
+  }
+  .rank-copy{
+    display:grid;
+    gap:6px;
+    min-width:0;
+  }
+  .rank-work{
+    overflow:hidden;
+    font:600 clamp(18px,2.05cqw,30px)/1.06 var(--serif);
+    letter-spacing:-.025em;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .rank-team{
+    overflow:hidden;
+    color:rgba(10,10,10,.58);
+    font:400 clamp(10px,1cqw,13px)/1.3 var(--sans);
+    letter-spacing:.06em;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .rank-metrics{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    justify-content:center;
+    gap:8px;
+    min-width:0;
+  }
+  .rank-criteria{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:4px 10px;
+    width:100%;
+  }
+  .rank-criterion{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:4px;
+    color:rgba(10,10,10,.52);
+    font:400 clamp(11px,1.15cqw,13.5px)/1.3 var(--mono);
+    letter-spacing:.01em;
+    white-space:nowrap;
+  }
+  .rank-criterion-value{
+    color:#0a0a0a;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+  }
+  .rank-criterion.is-award,
+  .rank-criterion.is-award .rank-criterion-label,
+  .rank-criterion.is-award .rank-criterion-value{color:var(--red)}
+  .rank-score{
+    font:600 clamp(24px,3.1cqw,44px)/.9 var(--serif);
+    letter-spacing:-.04em;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+  }
+  .rank-card.is-first .rank-score{color:var(--red)}
+  .rank-status{
+    margin:0;
+    padding:clamp(18px,3cqh,28px) 0;
+    color:rgba(10,10,10,.55);
+    font:400 clamp(10px,.82cqw,12px)/1.5 var(--mono);
+    letter-spacing:.08em;
+    text-align:center;
   }
 
   .slide-foot{
@@ -664,6 +742,25 @@
   .deck-button:focus-visible{outline:2px solid #0a0a0a;outline-offset:3px}
   .deck-arrow{font-size:16px;line-height:1;letter-spacing:0}
 
+  @media (max-width:1120px){
+    .rank-card{
+      grid-template-columns:clamp(54px,7cqw,72px) minmax(0,1fr);
+      grid-template-areas:
+        "rank copy"
+        "metrics metrics";
+      align-items:start;
+      row-gap:10px;
+    }
+    .rank-rank{grid-area:rank}
+    .rank-copy{grid-area:copy;align-self:center}
+    .rank-metrics{
+      grid-area:metrics;
+      width:100%;
+      gap:6px;
+    }
+    .rank-criteria{gap:4px 14px}
+  }
+
   @media (max-width:700px){
     .slide{padding:22px 20px 24px}
     .slide-cover{
@@ -710,15 +807,21 @@
     }
     .quadrant-stage{--quad-pointer-size:clamp(30px,10cqw,44px)}
     .slide-rank{padding:0}
+    .rank-side{display:none}
     .art[data-rule-mode="rank"] .sheet-rule-a{left:4%}
     .art[data-rule-mode="rank"] .sheet-rule-b{left:96%}
     .rank-layout{grid-template-columns:4% 92% 4%}
-    .rank-side{display:none}
     .rank-board{margin-inline:6px;padding:14px 14px}
-    .rank-card{min-height:68px;padding:10px 12px}
-    .rank-team{font-size:17px}
-    .rank-members{font-size:8px}
-    .rank-score{font-size:16px}
+    .rank-card{padding:12px 12px;gap:8px 10px}
+    .rank-rank{gap:4px}
+    .rank-number{font-size:26px}
+    .rank-award{padding:2px 5px;font-size:9px}
+    .rank-work{font-size:17px}
+    .rank-team{font-size:9px}
+    .rank-criteria{gap:3px 8px}
+    .rank-criterion{font-size:10px}
+    .rank-metrics{gap:7px}
+    .rank-score{font-size:28px}
     .info-grid{grid-template-columns:1fr}
     .split{
       grid-template-columns:1fr;
@@ -1271,10 +1374,10 @@
           <div class="slide-inner">
             <div class="cover-lockup">
               <div class="cover-meta">
-                <span class="cover-brand-text" data-fade data-fade-in-delay="0" data-fade-out-delay="70">CEA GameJam</span>
-                <span class="cover-date" data-fade data-fade-in-delay="70" data-fade-out-delay="45">2026.10</span>
+                <span class="cover-brand-text" data-parallax="0.14" data-fade data-fade-in-delay="0" data-fade-out-delay="70">CEA GameJam</span>
+                <span class="cover-date" data-parallax="0.26" data-fade data-fade-in-delay="70" data-fade-out-delay="45">2026.10</span>
               </div>
-              <h1 class="cover-title" data-fade data-fade-in-delay="140" data-fade-out-delay="20">参赛作品展示</h1>
+              <h1 class="cover-title" data-parallax="0.44" data-fade data-fade-in-delay="140" data-fade-out-delay="20">参赛作品展示</h1>
             </div>
             <figure class="cover-side" data-fade data-fade-in-delay="190" data-fade-out-delay="10" aria-label="ellia sideview 图片占位">
               <svg viewBox="0 0 100 64" preserveAspectRatio="none" aria-hidden="true" focusable="false">
@@ -1357,78 +1460,16 @@
           </div>
         </section>
 
-        <section class="slide slide-rank" data-slide="2" aria-roledescription="slide" aria-label="评分结果" aria-hidden="true">
+        <section class="slide slide-rank" data-slide="2" aria-roledescription="slide" aria-label="评分排行" aria-hidden="true">
           <div class="rank-layout">
-            <aside class="rank-side rank-side-left">
-              <h2 class="rank-side-title" data-fade data-fade-in-delay="0" data-fade-out-delay="60">评分结果</h2>
+            <aside class="rank-side">
+              <h2 class="rank-side-title rank-side-title-main" data-parallax="0.36" data-fade data-fade-in-delay="0" data-fade-out-delay="60">评分排行</h2>
+              <p class="rank-side-title rank-side-title-sub" data-parallax="0.36" data-fade data-fade-in-delay="90" data-fade-out-delay="20">Rank list</p>
             </aside>
             <div class="rank-board" data-parallax="0.18" data-fade data-fade-in-delay="45" data-fade-out-delay="35" tabindex="0" aria-label="队伍排行榜">
-              <ol class="rank-list">
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">01</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 01</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">02</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 02</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">03</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 03</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">04</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 04</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">05</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 05</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">06</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 06</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">07</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 07</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">08</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 08</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">09</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 09</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">10</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 10</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">11</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 11</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-                <li class="rank-card" data-parallax="0.28">
-                  <span class="rank-number">12</span>
-                  <span class="rank-copy"><strong class="rank-team">TEAM 12</strong><span class="rank-members">成员 A / B / C</span></span>
-                  <span class="rank-score">00.0</span>
-                </li>
-              </ol>
+              <ol class="rank-list" id="rankList"></ol>
+              <p class="rank-status" id="rankStatus" role="status">正在加载排行数据…</p>
             </div>
-            <aside class="rank-side rank-side-right">
-              <h2 class="rank-side-title" data-fade data-fade-in-delay="90" data-fade-out-delay="20">Rank list</h2>
-            </aside>
           </div>
         </section>
 
@@ -1664,6 +1705,8 @@
   let parallax = null;
   let quadrantPage = null;
   let rankPage = null;
+  let rankingData = null;
+  const RANKING_DATA_URL = new URL('data/ranking.json', document.baseURI);
 
   function updateStructureVeil(resizeDetail = null) {
     if (!structureVeil || !structureWidth || !structureHeight) return;
@@ -1843,8 +1886,8 @@
     if (slideIndex !== RANK_SLIDE || !rankPage) return null;
     const rect = art.getBoundingClientRect();
     const narrow = window.matchMedia?.('(max-width:700px)').matches === true;
-    const left = narrow ? 0.04 : 0.2;
-    const right = narrow ? 0.96 : 0.8;
+    const left = narrow ? 0.04 : 0.3;
+    const right = narrow ? 0.96 : 0.9;
     const x0 = rect.left + rect.width * left - 2;
     const x1 = rect.left + rect.width * right + 2;
     const inside =
@@ -1990,7 +2033,7 @@
     parallax = createParallax(art, {
       maxShiftPx,
       smoothing: PARALLAX_SMOOTHING,
-      selector: '#deck .slide-quadrants [data-parallax], #deck .slide-rank [data-parallax]'
+      selector: '#deck .slide-cover [data-parallax], #deck .slide-quadrants [data-parallax], #deck .slide-rank [data-parallax]'
     });
 
     function setHover(next) {
@@ -2308,6 +2351,154 @@
     return api;
   }
 
+  const RANK_CRITERIA_FALLBACK = [
+    { id: 'creativity', label: '创意分' },
+    { id: 'completeness', label: '完成度' },
+    { id: 'art', label: '美术分' },
+    { id: 'themeFit', label: '切题程度' }
+  ];
+
+  async function loadRankingData() {
+    try {
+      const response = await fetch(RANKING_DATA_URL, { cache: 'no-cache' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!data || !Array.isArray(data.teams) || !data.scoring ||
+          !Array.isArray(data.scoring.criteria) ||
+          !data.scoring.criteria.length) {
+        throw new Error('ranking JSON has no teams or criteria');
+      }
+      return data;
+    } catch (error) {
+      console.error('ranking data load failed', error);
+      return null;
+    }
+  }
+
+  function rankScoreText(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toFixed(2) : '—';
+  }
+
+  function rankNode(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function renderRankError(message) {
+    const list = document.getElementById('rankList');
+    const status = document.getElementById('rankStatus');
+    if (list) list.replaceChildren();
+    if (status) {
+      status.hidden = false;
+      status.textContent = message;
+    }
+  }
+
+  function renderRankCards(data) {
+    const list = document.getElementById('rankList');
+    const status = document.getElementById('rankStatus');
+    if (!list) return;
+
+    const criteria = data.scoring.criteria.length
+      ? data.scoring.criteria
+      : RANK_CRITERIA_FALLBACK;
+    const awardTitles = new Map(
+      (Array.isArray(data.awards) ? data.awards : [])
+        .map((award) => [award.id, award.title])
+    );
+    const teams = Array.isArray(data.teams) ? data.teams : [];
+    if (!teams.length) {
+      renderRankError('暂无排行数据。');
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    for (const team of teams) {
+      const rank = Number.isInteger(team.rank) ? team.rank : null;
+      const score = rankScoreText(team.overallScore);
+      const card = rankNode('li', 'rank-card');
+      card.dataset.parallax = '0.28';
+      card.dataset.rank = rank === null ? '' : String(rank);
+      card.dataset.teamId = String(team.teamId ?? '');
+      if (rank !== null && rank <= 3) card.classList.add('is-podium');
+      if (rank === 1) card.classList.add('is-first');
+      if (team.tied) card.classList.add('is-tied');
+
+      const workTitle = team.workTitle || '未提供作品名';
+      const teamName = team.teamName || '未知队伍';
+      card.setAttribute(
+        'aria-label',
+        `${rank === null ? '未排名' : `第 ${rank} 名${team.tied ? '（并列）' : ''}`}，` +
+        `${workTitle}，${teamName}，综合评分 ${score}`
+      );
+
+      const rankBox = rankNode('div', 'rank-rank');
+      rankBox.append(
+        rankNode('span', 'rank-number', rank === null ? '—' : `#${rank}`)
+      );
+      if (team.tied) rankBox.append(rankNode('span', 'rank-tie', '并列'));
+
+      const awardIds = Array.isArray(team.awards) ? team.awards : [];
+      if (awardIds.length) {
+        const awards = rankNode('div', 'rank-awards');
+        for (const awardId of awardIds) {
+          awards.append(rankNode(
+            'span',
+            'rank-award',
+            awardTitles.get(awardId) || awardId
+          ));
+        }
+        rankBox.append(awards);
+      }
+      card.append(rankBox);
+
+      const copy = rankNode('div', 'rank-copy');
+      copy.append(rankNode('strong', 'rank-work', workTitle));
+      copy.append(rankNode('span', 'rank-team', teamName));
+      card.append(copy);
+
+      const metrics = rankNode('div', 'rank-metrics');
+      const criteriaBox = rankNode('div', 'rank-criteria');
+      for (const criterion of criteria) {
+        const cell = rankNode('span', 'rank-criterion');
+        if (awardIds.includes(criterion.id)) cell.classList.add('is-award');
+        cell.append(rankNode('span', 'rank-criterion-label', criterion.label));
+        cell.append(rankNode(
+          'span',
+          'rank-criterion-value',
+          rankScoreText(team.scores?.[criterion.id])
+        ));
+        criteriaBox.append(cell);
+      }
+      metrics.append(criteriaBox);
+      metrics.append(rankNode('span', 'rank-score', score));
+      card.append(metrics);
+
+      fragment.append(card);
+    }
+
+    list.replaceChildren(fragment);
+    if (status) status.hidden = true;
+  }
+
+  async function prepareRankPage() {
+    const data = await rankingDataPromise;
+    if (!data) {
+      renderRankError('排行数据加载失败。');
+      return;
+    }
+    try {
+      rankingData = data;
+      renderRankCards(data);
+    } catch (error) {
+      console.error('ranking render failed', error);
+      renderRankError('排行数据格式异常。');
+    }
+  }
+
   function initRankPage() {
     const board = document.querySelector('#deck .slide-rank .rank-board');
     const cards = [...document.querySelectorAll('#deck .slide-rank .rank-card')];
@@ -2497,9 +2688,7 @@
     };
   }
 
-  quadrantPage = initQuadrantPage();
-  quadrantPage?.sync();
-  rankPage = initRankPage();
+  const rankingDataPromise = loadRankingData();
 
   function applySurface() {
     const center = tuning.center;
@@ -2753,6 +2942,7 @@
     get parallax() { return parallax; },
     get quadrant() { return quadrantPage; },
     get rank() { return rankPage; },
+    get rankingData() { return rankingData; },
     deck: deckApi,
     get preflight() { return preflight; },
     get ready() { return mirror !== null; },
@@ -3102,6 +3292,10 @@
 
   async function init() {
     document.body.setAttribute('aria-busy', 'true');
+    await prepareRankPage();
+    quadrantPage = initQuadrantPage();
+    quadrantPage?.sync();
+    rankPage = initRankPage();
 
     let three;
     try {

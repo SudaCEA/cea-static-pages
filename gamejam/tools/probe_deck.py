@@ -104,6 +104,9 @@ def read_layout(page):
               brandAlign: getComputedStyle(coverBrand).textAlign,
               dateAlign: getComputedStyle(coverDate).textAlign,
               titleAlign: getComputedStyle(coverTitle).textAlign,
+              brandDepth: Number(coverBrand.dataset.parallax),
+              dateDepth: Number(coverDate.dataset.parallax),
+              titleDepth: Number(coverTitle.dataset.parallax),
               brand: rectOf(coverBrand),
               date: rectOf(coverDate),
               lockup: rectOf(coverLockup),
@@ -227,6 +230,9 @@ def assert_structure(page):
               f"cover {key} is not serif: {cover[key]}")
     for key in ("brandAlign", "dateAlign", "titleAlign"):
         check(cover[key] == "left", f"cover {key} is not left aligned: {cover[key]}")
+    cover_depths = {cover["brandDepth"], cover["dateDepth"], cover["titleDepth"]}
+    check(len(cover_depths) == 3 and min(cover_depths) > 0,
+          f"cover text parallax depths are not distinct: {cover}")
     check(all(cover[key][2] > 0 and cover[key][3] > 0
               for key in ("brand", "date", "lockup", "side", "title")),
           f"cover layout is empty: {cover}")
@@ -564,34 +570,123 @@ def assert_rank_page(page):
             scroll: [board.scrollHeight, board.clientHeight],
             overflowX: getComputedStyle(board).overflowX,
             overflowY: getComputedStyle(board).overflowY,
-            labels: [...document.querySelectorAll('.rank-side-title')].map((el) => el.textContent.trim()),
+            labels: [...document.querySelectorAll('.rank-side-title')].map((el) => {
+              const rect = el.getBoundingClientRect();
+              const style = getComputedStyle(el);
+              return {
+                text: el.textContent.trim(),
+                writingMode: style.writingMode,
+                fontSize: Number.parseFloat(style.fontSize),
+                depth: Number(el.dataset.parallax),
+                rect: [rect.x, rect.y, rect.width, rect.height],
+                transform: el.style.transform
+              };
+            }),
             cards: cards.length,
             cardBorder: getComputedStyle(cards[0]).borderTopWidth,
             cardHeights: cards.map((card) => card.getBoundingClientRect().height),
+            firstCard: cards[0] ? {
+              classes: [...cards[0].classList],
+              number: cards[0].querySelector('.rank-number')?.textContent.trim(),
+              work: cards[0].querySelector('.rank-work')?.textContent.trim(),
+              team: cards[0].querySelector('.rank-team')?.textContent.trim(),
+              score: cards[0].querySelector('.rank-score')?.textContent.trim(),
+              awards: [...cards[0].querySelectorAll('.rank-award')].map((el) => el.textContent.trim()),
+              criteria: [...cards[0].querySelectorAll('.rank-criterion')].map((el) => ({
+                label: el.querySelector('.rank-criterion-label')?.textContent.trim(),
+                value: el.querySelector('.rank-criterion-value')?.textContent.trim(),
+                award: el.classList.contains('is-award'),
+                color: getComputedStyle(el).color
+              })),
+              rankColor: getComputedStyle(cards[0].querySelector('.rank-number')).color,
+              scoreColor: getComputedStyle(cards[0].querySelector('.rank-score')).color
+            } : null,
+            podiumColors: cards.slice(0, 3).map((card) =>
+              getComputedStyle(card.querySelector('.rank-number')).color
+            ),
+            podiumScores: cards.slice(0, 3).map((card) =>
+              getComputedStyle(card.querySelector('.rank-score')).color
+            ),
+            tieLabels: cards.map((card) =>
+              card.querySelector('.rank-tie')?.textContent.trim() || null
+            ),
             rules
           };
         }"""
     )
     check(data["mode"] == "rank",
           f"ranking page did not switch the sheet rules: {data['mode']}")
-    check(data["labels"] == ["评分结果", "Rank list"],
-          f"ranking side labels: {data['labels']}")
-    check(data["cards"] == 12,
-          f"expected twelve ranking placeholders: {data['cards']}")
+    labels = data["labels"]
+    check([label["text"] for label in labels] == ["评分排行", "Rank list"],
+          f"ranking rail labels: {labels}")
+    check(all(label["writingMode"] == "horizontal-tb" for label in labels),
+          f"ranking labels are not horizontal: {labels}")
+    check(labels[0]["fontSize"] > labels[1]["fontSize"] * 1.5,
+          f"ranking label hierarchy is missing: {labels}")
+    check(len({label["depth"] for label in labels}) == 1 and labels[0]["depth"] > 0,
+          f"ranking labels do not share one parallax depth: {labels}")
+    upper_label, lower_label = labels
+    upper = upper_label["rect"]
+    lower = lower_label["rect"]
+    art_left, art_top, _, art_height = data["art"]
+    rail_left = upper[0] - art_left
+    check(abs(upper[0] - lower[0]) <= 1,
+          f"ranking labels are not aligned in one rail: {labels}")
+    check(lower[1] - (upper[1] + upper[3]) >= 8,
+          f"ranking labels are not stacked with a gap: {labels}")
+    check(8 <= rail_left <= 64,
+          f"ranking rail is not inset from the left edge: {rail_left} {labels}")
+    stack_center = (upper[1] + lower[1] + lower[3]) / 2
+    check(abs(stack_center - (art_top + art_height / 2)) <= art_height * 0.08,
+          f"ranking rail is not vertically centred: {labels} {data['art']}")
+    for label in labels:
+        right = label["rect"][0] + label["rect"][2]
+        check(right < data["rules"][0] - 4,
+              f"ranking labels cross the left rule: {labels} {data['rules']}")
+        check(right < data["board"][0] - 4,
+              f"ranking labels overlap the list: {labels} {data['board']}")
+    check(data["cards"] == 15,
+          f"expected fifteen ranking teams: {data['cards']}")
+    first = data["firstCard"]
+    check(first and first["number"] == "#1" and first["work"] == "镜界" and
+          first["team"] == "吴彦组" and first["score"] == "7.93",
+          f"ranking card content is wrong: {first}")
+    check(first["awards"] == ["完成度奖"],
+          f"ranking award tag is wrong: {first}")
+    check(first["classes"].count("is-first") == 1 and
+          "is-podium" in first["classes"],
+          f"ranking podium classes are wrong: {first['classes']}")
+    check(first["rankColor"] == "rgb(216, 74, 51)" and
+          first["scoreColor"] == "rgb(216, 74, 51)",
+          f"ranking accent is missing: {first}")
+    check(all(color == "rgb(216, 74, 51)" for color in data["podiumColors"]),
+          f"podium ranks are not accented: {data['podiumColors']}")
+    check(data["podiumScores"][0] == "rgb(216, 74, 51)" and
+          all(color != "rgb(216, 74, 51)" for color in data["podiumScores"][1:]),
+          f"first-place score accent is wrong: {data['podiumScores']}")
+    award_cells = [cell for cell in first["criteria"] if cell["award"]]
+    check(len(award_cells) == 1 and award_cells[0]["label"] == "完成度" and
+          award_cells[0]["color"] == "rgb(216, 74, 51)",
+          f"award criterion is not accented: {first['criteria']}")
+    check(all(cell["color"] != "rgb(216, 74, 51)"
+              for cell in first["criteria"] if not cell["award"]),
+          f"non-award criteria are accented: {first['criteria']}")
+    check(data["tieLabels"][5] == "并列" and data["tieLabels"][6] == "并列",
+          f"tied ranks are not labelled: {data['tieLabels']}")
     check(data["scroll"][0] > data["scroll"][1] + 40,
           f"ranking list is not scrollable: {data['scroll']}")
     check(data["overflowX"] == "hidden" and data["overflowY"] == "auto",
           f"ranking list scroll axes are wrong: {data}")
     check(data["board"][2] / data["art"][2] > 0.54,
           f"ranking list is too narrow: {data['board']} in {data['art']}")
-    check(all(height > 70 for height in data["cardHeights"]),
+    check(all(height > 90 for height in data["cardHeights"]),
           f"ranking cards are too short: {data['cardHeights']}")
     check(abs(float(data["cardBorder"].replace("px", "")) - 1) <= 0.5,
           f"ranking card border: {data['cardBorder']}")
-    check(abs(data["rules"][0] - (data["art"][0] + data["art"][2] * 0.2)) <= 2 and
-          abs(data["rules"][1] - (data["art"][0] + data["art"][2] * 0.8)) <= 2,
-          f"ranking rules are not at the 20/80 columns: {data['rules']}")
-    check((data["art"][0] + data["art"][2] * 0.8) -
+    check(abs(data["rules"][0] - (data["art"][0] + data["art"][2] * 0.3)) <= 2 and
+          abs(data["rules"][1] - (data["art"][0] + data["art"][2] * 0.9)) <= 2,
+          f"ranking rules are not at the 30/90 columns: {data['rules']}")
+    check((data["art"][0] + data["art"][2] * 0.9) -
           (data["board"][0] + data["board"][2]) > 4,
           f"ranking scrollbar sits too close to the right rule: {data}")
 
@@ -658,7 +753,7 @@ def assert_rank_page(page):
           f"ranking card still fills white on hover: {hover}")
     check(hover["scale"] > 1.01 and hover["depth"] > 0.5,
           f"ranking card did not scale or move nearer: {hover}")
-    check(hover["rank"]["hovered"] == "TEAM 01",
+    check(hover["rank"]["hovered"] == "吴彦组",
           f"ranking parallax did not track the hovered card: {hover}")
     page.mouse.click(box["x"] + box["width"] * 0.55,
                      box["y"] + box["height"] * 0.72)
@@ -1069,10 +1164,12 @@ def assert_config(page):
           f"copy config kept old fade timings: {deck}")
     parallax = config.get("parallax")
     check(parallax is not None, f"copy config has no parallax: {config}")
-    check(len(parallax["layers"]) == 22,
+    check(len(parallax["layers"]) == 30,
           f"copy config parallax layers: {parallax}")
-    check(len({layer["depth"] for layer in parallax["layers"]}) >= 3,
+    check(len({layer["depth"] for layer in parallax["layers"]}) >= 5,
           f"copy config parallax depths: {parallax}")
+    check([layer["depth"] for layer in parallax["layers"][:3]] == [0.14, 0.26, 0.44],
+          f"copy config cover parallax depths: {parallax}")
     check(config.get("quadrants") == {
         "index": 1,
         "hover": None,
@@ -1158,6 +1255,8 @@ def run_backend(browser, mode, tag, *, width=1200, height=900, dpr=1):
         wait_deck(page)
         check(page.evaluate("window.__mirrorHome.mirror.mode") == mode,
               f"expected {mode}")
+        page.evaluate("window.__mirrorHome.parallax?.reset()")
+        page.wait_for_timeout(450)
         layout = assert_structure(page)
         first, last = assert_navigation(page)
         assert_rank_page(page)

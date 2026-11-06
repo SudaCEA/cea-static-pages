@@ -1,0 +1,537 @@
+{
+  "schemaVersion": 1,
+  "event": {
+    "id": "2026-codejam-rating",
+    "criteriaVersion": 1
+  },
+  "source": {
+    "csv": "assets/mirror-26/cea-submissions-2026-codejam-rating-20261106-113938.csv",
+    "sha256": "9b3271007d9ee34863d4691deb7c9ecfe139cd45239f53bbaafe372ae5e0c0db",
+    "rowCount": 18,
+    "generatedAt": "2026-11-06T14:09:02+08:00",
+    "generator": "tools/convert_ranking.py"
+  },
+  "scoring": {
+    "criteria": [
+      {
+        "id": "creativity",
+        "label": "创意分",
+        "awardTitle": "创意奖",
+        "maxScore": 10
+      },
+      {
+        "id": "completeness",
+        "label": "完成度",
+        "awardTitle": "完成度奖",
+        "maxScore": 10
+      },
+      {
+        "id": "art",
+        "label": "美术分",
+        "awardTitle": "美术奖",
+        "maxScore": 10
+      },
+      {
+        "id": "themeFit",
+        "label": "切题程度",
+        "awardTitle": "切题奖",
+        "maxScore": 10
+      }
+    ],
+    "minCriterionScore": 1,
+    "maxCriterionScore": 10,
+    "maxTotalScore": 40,
+    "rankBy": "overallScore",
+    "storedPrecision": 4,
+    "displayPrecision": 2,
+    "rankTies": "shared"
+  },
+  "teams": [
+    {
+      "rank": 1,
+      "tied": false,
+      "teamId": 7,
+      "teamName": "吴彦组",
+      "workTitle": "镜界",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 8.1765,
+        "completeness": 8.6471,
+        "art": 7.7647,
+        "themeFit": 7.1176
+      },
+      "totalScore": 31.7059,
+      "overallScore": 7.9265,
+      "awards": [
+        "completeness"
+      ]
+    },
+    {
+      "rank": 2,
+      "tied": false,
+      "teamId": 8,
+      "teamName": "欢乐斗地组",
+      "workTitle": "破镜",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 7.9412,
+        "completeness": 7.9412,
+        "art": 7.6471,
+        "themeFit": 7.5882
+      },
+      "totalScore": 31.1176,
+      "overallScore": 7.7794,
+      "awards": []
+    },
+    {
+      "rank": 3,
+      "tied": false,
+      "teamId": 4,
+      "teamName": "啊啊啊啊啊gamejam我们喜欢你",
+      "workTitle": "镜间",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 7.6471,
+        "completeness": 7.5882,
+        "art": 6.4118,
+        "themeFit": 7.8824
+      },
+      "totalScore": 29.5294,
+      "overallScore": 7.3824,
+      "awards": [
+        "themeFit"
+      ]
+    },
+    {
+      "rank": 4,
+      "tied": false,
+      "teamId": 16,
+      "teamName": "关于我独自从零开始为鼠大献上美好祝福这件事",
+      "workTitle": "红之镜demo",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 7.0,
+        "completeness": 8.0,
+        "art": 8.0588,
+        "themeFit": 5.7647
+      },
+      "totalScore": 28.8235,
+      "overallScore": 7.2059,
+      "awards": [
+        "art"
+      ]
+    },
+    {
+      "rank": 5,
+      "tied": false,
+      "teamId": 11,
+      "teamName": "听说你用了中文的逗号?",
+      "workTitle": "灯镜余辉",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 6.8235,
+        "completeness": 7.4706,
+        "art": 6.8824,
+        "themeFit": 7.2941
+      },
+      "totalScore": 28.4706,
+      "overallScore": 7.1176,
+      "awards": []
+    },
+    {
+      "rank": 6,
+      "tied": true,
+      "teamId": 3,
+      "teamName": "啊，我也要做开发吗？",
+      "workTitle": "镜界",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 7.0588,
+        "completeness": 7.3529,
+        "art": 6.5882,
+        "themeFit": 7.3529
+      },
+      "totalScore": 28.3529,
+      "overallScore": 7.0882,
+      "awards": []
+    },
+    {
+      "rank": 6,
+      "tied": true,
+      "teamId": 2,
+      "teamName": "双区战车",
+      "workTitle": "镜界线",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 6.9412,
+        "completeness": 7.3529,
+        "art": 6.4706,
+        "themeFit": 7.5882
+      },
+      "totalScore": 28.3529,
+      "overallScore": 7.0882,
+      "awards": []
+    },
+    {
+      "rank": 8,
+      "tied": false,
+      "teamId": 9,
+      "teamName": "从来没觉得写程序开心过",
+      "workTitle": "镜舱",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 6.8824,
+        "completeness": 7.1176,
+        "art": 6.7647,
+        "themeFit": 7.3529
+      },
+      "totalScore": 28.1176,
+      "overallScore": 7.0294,
+      "awards": []
+    },
+    {
+      "rank": 9,
+      "tied": false,
+      "teamId": 5,
+      "teamName": "琪露诺的完美编程教室",
+      "workTitle": "镜愈",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 6.7647,
+        "completeness": 6.4706,
+        "art": 7.7647,
+        "themeFit": 7.0
+      },
+      "totalScore": 28.0,
+      "overallScore": 7.0,
+      "awards": []
+    },
+    {
+      "rank": 10,
+      "tied": false,
+      "teamId": 13,
+      "teamName": "我和GPT",
+      "workTitle": "MirrorTune/境波乐队",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 8.7647,
+        "completeness": 7.1176,
+        "art": 6.2353,
+        "themeFit": 5.8235
+      },
+      "totalScore": 27.9412,
+      "overallScore": 6.9853,
+      "awards": [
+        "creativity"
+      ]
+    },
+    {
+      "rank": 11,
+      "tied": false,
+      "teamId": 12,
+      "teamName": "《CodeJam啊，我用WPS做的》",
+      "workTitle": "镜与球（4399正版）",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 6.7647,
+        "completeness": 7.1765,
+        "art": 6.2353,
+        "themeFit": 7.4706
+      },
+      "totalScore": 27.6471,
+      "overallScore": 6.9118,
+      "awards": []
+    },
+    {
+      "rank": 12,
+      "tied": false,
+      "teamId": 10,
+      "teamName": "愤怒的孤狼",
+      "workTitle": "镜渊",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 6.7647,
+        "completeness": 6.7059,
+        "art": 6.8235,
+        "themeFit": 7.2941
+      },
+      "totalScore": 27.5882,
+      "overallScore": 6.8971,
+      "awards": []
+    },
+    {
+      "rank": 13,
+      "tied": false,
+      "teamId": 1,
+      "teamName": "寒风叔叔の玉组🦶",
+      "workTitle": "镜尽余色",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 6.2941,
+        "completeness": 6.8235,
+        "art": 6.8235,
+        "themeFit": 7.0
+      },
+      "totalScore": 26.9412,
+      "overallScore": 6.7353,
+      "awards": []
+    },
+    {
+      "rank": 14,
+      "tied": false,
+      "teamId": 6,
+      "teamName": "Checkm8!",
+      "workTitle": "Checkm8!",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 6.3529,
+        "completeness": 6.5882,
+        "art": 5.7059,
+        "themeFit": 6.4706
+      },
+      "totalScore": 25.1176,
+      "overallScore": 6.2794,
+      "awards": []
+    },
+    {
+      "rank": 15,
+      "tied": false,
+      "teamId": 15,
+      "teamName": "大肥鱼要吃多少token？",
+      "workTitle": "见影秘若",
+      "ratingCount": 17,
+      "expectedCount": 17,
+      "complete": true,
+      "scores": {
+        "creativity": 6.2353,
+        "completeness": 6.4706,
+        "art": 5.8235,
+        "themeFit": 5.9412
+      },
+      "totalScore": 24.4706,
+      "overallScore": 6.1176,
+      "awards": []
+    }
+  ],
+  "unranked": [],
+  "awards": [
+    {
+      "id": "creativity",
+      "title": "创意奖",
+      "criterionId": "creativity",
+      "criterionLabel": "创意分",
+      "blurb": "核心玩法、机制或表达的新意与趣味。",
+      "bestScore": 8.7647,
+      "tied": false,
+      "winners": [
+        {
+          "teamId": 13,
+          "teamName": "我和GPT",
+          "workTitle": "MirrorTune/境波乐队",
+          "rank": 10,
+          "score": 8.7647
+        }
+      ],
+      "runners": [
+        {
+          "teamId": 7,
+          "teamName": "吴彦组",
+          "workTitle": "镜界",
+          "rank": 1,
+          "score": 8.1765
+        },
+        {
+          "teamId": 8,
+          "teamName": "欢乐斗地组",
+          "workTitle": "破镜",
+          "rank": 2,
+          "score": 7.9412
+        },
+        {
+          "teamId": 4,
+          "teamName": "啊啊啊啊啊gamejam我们喜欢你",
+          "workTitle": "镜间",
+          "rank": 3,
+          "score": 7.6471
+        }
+      ]
+    },
+    {
+      "id": "completeness",
+      "title": "完成度奖",
+      "criterionId": "completeness",
+      "criterionLabel": "完成度",
+      "blurb": "可玩闭环、流程顺畅与关键功能齐全。",
+      "bestScore": 8.6471,
+      "tied": false,
+      "winners": [
+        {
+          "teamId": 7,
+          "teamName": "吴彦组",
+          "workTitle": "镜界",
+          "rank": 1,
+          "score": 8.6471
+        }
+      ],
+      "runners": [
+        {
+          "teamId": 16,
+          "teamName": "关于我独自从零开始为鼠大献上美好祝福这件事",
+          "workTitle": "红之镜demo",
+          "rank": 4,
+          "score": 8.0
+        },
+        {
+          "teamId": 8,
+          "teamName": "欢乐斗地组",
+          "workTitle": "破镜",
+          "rank": 2,
+          "score": 7.9412
+        },
+        {
+          "teamId": 4,
+          "teamName": "啊啊啊啊啊gamejam我们喜欢你",
+          "workTitle": "镜间",
+          "rank": 3,
+          "score": 7.5882
+        }
+      ]
+    },
+    {
+      "id": "art",
+      "title": "美术奖",
+      "criterionId": "art",
+      "criterionLabel": "美术分",
+      "blurb": "画面、UI 与音效的统一和感染力。",
+      "bestScore": 8.0588,
+      "tied": false,
+      "winners": [
+        {
+          "teamId": 16,
+          "teamName": "关于我独自从零开始为鼠大献上美好祝福这件事",
+          "workTitle": "红之镜demo",
+          "rank": 4,
+          "score": 8.0588
+        }
+      ],
+      "runners": [
+        {
+          "teamId": 7,
+          "teamName": "吴彦组",
+          "workTitle": "镜界",
+          "rank": 1,
+          "score": 7.7647
+        },
+        {
+          "teamId": 5,
+          "teamName": "琪露诺的完美编程教室",
+          "workTitle": "镜愈",
+          "rank": 9,
+          "score": 7.7647
+        },
+        {
+          "teamId": 8,
+          "teamName": "欢乐斗地组",
+          "workTitle": "破镜",
+          "rank": 2,
+          "score": 7.6471
+        }
+      ]
+    },
+    {
+      "id": "themeFit",
+      "title": "切题奖",
+      "criterionId": "themeFit",
+      "criterionLabel": "切题程度",
+      "blurb": "对 Game Jam 主题的理解与契合。",
+      "bestScore": 7.8824,
+      "tied": false,
+      "winners": [
+        {
+          "teamId": 4,
+          "teamName": "啊啊啊啊啊gamejam我们喜欢你",
+          "workTitle": "镜间",
+          "rank": 3,
+          "score": 7.8824
+        }
+      ],
+      "runners": [
+        {
+          "teamId": 8,
+          "teamName": "欢乐斗地组",
+          "workTitle": "破镜",
+          "rank": 2,
+          "score": 7.5882
+        },
+        {
+          "teamId": 2,
+          "teamName": "双区战车",
+          "workTitle": "镜界线",
+          "rank": 6,
+          "score": 7.5882
+        },
+        {
+          "teamId": 12,
+          "teamName": "《CodeJam啊，我用WPS做的》",
+          "workTitle": "镜与球（4399正版）",
+          "rank": 11,
+          "score": 7.4706
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "submissionCount": 18,
+    "sourceSubmissionCount": 18,
+    "duplicateSubmissionCount": 0,
+    "teamCount": 15,
+    "rankedTeamCount": 15,
+    "unrankedTeamCount": 0,
+    "excludedTeamCount": 1,
+    "excludedSubmissionCount": 0,
+    "excludedRatingCount": 18,
+    "ratingCount": 255,
+    "judgeTeamCount": 3,
+    "judgeSubmissionCount": 3,
+    "expectedTeamCount": 15,
+    "completeTeamCount": 15,
+    "incompleteTeamCount": 0,
+    "selfRatingCount": 0,
+    "ignoredKindCount": 0
+  },
+  "excludedTeams": [
+    {
+      "teamId": 14,
+      "teamName": "对的对的"
+    }
+  ],
+  "warnings": []
+}
