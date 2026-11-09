@@ -2,6 +2,13 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<!-- HTML-in-Canvas origin trial · token issued for https://ellia.cn:443 with
+     isSubdomain, so it covers every https://*.ellia.cn page; valid until
+     2027-03-02T00:00:00Z. Renew it in the developer console before it expires:
+     an expired or non-matching token is ignored (console warning only) and the
+     page falls back to the SVG backend as before. Only this page carries the
+     token: mirror-lab.html is source-only and never shipped. -->
+<meta http-equiv="origin-trial" content="AnUnF7Lux3obq/C1Rfoc2QWlG8t/08Ub6RXrK9njrSv4GQBORMXk+Nbo+YG7alYjdGev9FUCQwOffbigAoUEmA8AAABheyJvcmlnaW4iOiJodHRwczovL2VsbGlhLmNuOjQ0MyIsImZlYXR1cmUiOiJIVE1MSW5DYW52YXMiLCJleHBpcnkiOjE4MDM5NDU2MDAsImlzU3ViZG9tYWluIjp0cnVlfQ==">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <meta name="description" content="Mirror 2610 — a reflection study built with mirror.js.">
@@ -14,12 +21,14 @@
     --mono:"SFMono-Regular","Cascadia Mono","Roboto Mono",Consolas,monospace;
     --sans:"Helvetica Neue","Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Songti SC","Noto Serif CJK SC","Source Han Serif SC","Times New Roman",serif;
-    /* Cover-only spacing. Line and Image Y are adjustable; the
-       content-to-rule gap and text translate are fixed. */
-    --cover-bar-height:3px;
+    /* Cover-only spacing, fixed by design: the bottom rule is 6px and the
+       sideview image sits at 150% of its column. The content-to-rule gap and
+       the text translate stay at 32px / 0. */
+    --cover-bar-height:6px;
     --cover-bottom-gap:32px;
     --cover-text-y:0px;
-    --cover-art-y:0px;
+    --cover-art-scale:1.5;
+    --cover-art-nudge-x:2px;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -70,12 +79,16 @@
   .art.is-field-fallback{background:#ffffff}
 
   /* Full-size mirrored slide deck above the particle surface. Transitions only
-     change opacity/visibility; the content rectangle and canvas stay fixed. */
+     change opacity/visibility; the content rectangle and canvas stay fixed.
+     `overflow:clip` keeps the rotated sheet rules clipped without turning the
+     deck into a scroll container, so focusing a control can never nudge the
+     whole content by a pixel or two. */
   .deck{
     position:absolute;
     inset:0;
     z-index:1;
     overflow:hidden;
+    overflow:clip;
     color:#0a0a0a;
   }
   .slide{
@@ -119,6 +132,8 @@
     min-height:0;
   }
   .cover-lockup{
+    position:relative;
+    z-index:1;
     min-width:0;
     align-self:end;
     translate:0 var(--cover-text-y);
@@ -151,27 +166,25 @@
     white-space:nowrap;
   }
   .cover-side{
-    position:relative;
-    width:100%;
-    max-width:560px;
-    aspect-ratio:1.55;
+    position:absolute;
+    right:0;
+    bottom:0;
+    z-index:0;
+    width:min(35.9cqw,560px);
+    aspect-ratio:1401/978;
     margin:0;
-    justify-self:end;
-    align-self:end;
-    translate:0 var(--cover-art-y);
+    transform-origin:100% 100%;
+    translate:var(--cover-art-nudge-x) 0;
+    scale:var(--cover-art-scale);
   }
-  .cover-side svg{
+  .cover-side img{
     display:block;
     width:100%;
     height:100%;
-    overflow:visible;
-    color:#0a0a0a;
-  }
-  .cover-side path{
-    fill:none;
-    stroke:currentColor;
-    stroke-width:2px;
-    vector-effect:non-scaling-stroke;
+    object-fit:contain;
+    object-position:center;
+    user-select:none;
+    -webkit-user-drag:none;
   }
   /* Quadrant page: a 2×2 field around one centre mark. The colour panels are
      real backdrop filters. Their SVG definitions screen a tint into dark ink,
@@ -314,21 +327,34 @@
   .art[data-rule-mode="rank"] .sheet-rule-a{left:30%}
   .art[data-rule-mode="rank"] .sheet-rule-b{left:90%}
   .art[data-rule-mode="detail"] .sheet-rule{
-    height:3px;
-    transform:translate(-50%,-50%) rotate(90deg);
-  }
-  /* The left ranking rule stays vertical and moves in to the narrower rail;
-     the right rule turns into the compact footer line. */
-  .art[data-rule-mode="detail"] .sheet-rule-a{
-    top:50%;
-    left:24%;
-  }
-  .art[data-rule-mode="detail"] .sheet-rule-b{
-    top:90%;
+    top:0;
     left:50%;
-    /* 90deg -> 180deg: keep the line horizontal while turning clockwise. */
-    transform:translate(-50%,-50%) rotate(180deg);
+    height:3px;
+    /* 90deg -> 180deg: a single clockwise quarter turn, not a 270deg spin. */
+    transform:translate(-50%,0) rotate(180deg);
   }
+  /* The detail rules leave their ranking columns and frame the content:
+     one lies inside the top edge, the other inside the bottom edge. */
+  .art[data-rule-mode="detail"] .sheet-rule-b{
+    top:100%;
+    /* 90deg -> 180deg: keep the line horizontal while turning clockwise. */
+    transform:translate(-50%,-100%) rotate(180deg);
+  }
+  /* Closing page: both rules leave the content edges and settle as 45deg cuts,
+     one across the top-right corner and one across the bottom-left. Each bar
+     keeps its own centre on the midpoint of a short (left/right) content edge,
+     so it crosses that edge exactly at its midpoint and the two cuts frame the
+     logo. The rule that framed the content top (A) travels right and becomes
+     the top-right cut; the one from the content bottom (B) travels left and
+     becomes the bottom-left cut. */
+  .art[data-rule-mode="end"] .sheet-rule{
+    top:50%;
+    left:100%;
+    height:3px;
+    /* 180deg -> 225deg: a single clockwise quarter turn into the cut. */
+    transform:translate(-50%,-50%) rotate(225deg);
+  }
+  .art[data-rule-mode="end"] .sheet-rule-b{left:0}
 
   /* A light-grey ring around the native cursor on every slide. It is a
      direct child of the deck and sits below every slide, so the quadrant
@@ -611,10 +637,10 @@
     text-align:center;
   }
 
-  /* Work detail page: a narrow intro rail, a dominant video frame, and an
-     overlapping right-hand work card. The compact footer carries the award
-     and the work switcher. The persistent rules supply the 24% rail divider
-     and the 90% footer line, so the page itself adds no full-width rules. */
+  /* Work detail page: a narrow title/text rail, a dominant video frame, and
+     a hover-revealed action tray at the video's lower-right corner. The two
+     persistent rules leave the ranking columns and frame the content at its
+     top and bottom edges. Wheel movement inside that frame switches works. */
   .slide-detail{
     padding:0;
     overflow:hidden;
@@ -624,7 +650,7 @@
     inset:0;
     display:grid;
     grid-template-columns:24% minmax(0,1fr);
-    grid-template-rows:minmax(0,1fr) 10%;
+    grid-template-rows:minmax(0,1fr) 7%;
     min-width:0;
     min-height:0;
   }
@@ -633,53 +659,66 @@
     grid-row:1;
     min-width:0;
     min-height:0;
-    padding:clamp(10px,3.4cqh,30px) clamp(12px,2.8cqw,34px);
+    padding:clamp(18px,3.4cqh,26px) clamp(12px,2.2cqw,24px);
   }
   .detail-intro-card{
     display:flex;
     flex-direction:column;
     justify-content:center;
-    gap:clamp(14px,2.8cqh,26px);
+    gap:clamp(20px,4cqh,34px);
     width:100%;
     height:100%;
-    padding:clamp(16px,3.8cqh,34px) clamp(14px,2.4cqw,28px);
-    border:1px solid #0a0a0a;
+    min-height:0;
+    padding:0;
+    border:0;
     background:transparent;
   }
   .detail-intro-copy{
     display:grid;
-    gap:clamp(12px,2.2cqh,20px);
+    gap:clamp(16px,2.8cqh,24px);
     min-width:0;
   }
   .detail-intro-title{
+    width:100%;
     margin:0;
-    font:500 clamp(22px,2.5cqw,36px)/1.05 var(--serif);
+    padding:clamp(10px,1.5cqh,14px) clamp(12px,1.5cqw,18px);
+    border:1px solid #0a0a0a;
+    font:500 clamp(21px,2.35cqw,34px)/1.08 var(--serif);
     letter-spacing:-.035em;
+    overflow-wrap:anywhere;
+    text-align:center;
+    text-wrap:balance;
   }
   .detail-intro-body{
     max-width:100%;
     margin:0;
-    color:rgba(10,10,10,.78);
-    font:400 clamp(11px,.95cqw,14px)/1.72 var(--serif);
+    padding:0 clamp(2px,.4cqw,5px);
+    color:rgba(10,10,10,.72);
+    font:400 clamp(13px,1.18cqw,17.5px)/1.66 var(--serif);
     letter-spacing:.01em;
     text-wrap:balance;
   }
   .detail-intro-meta{
     display:flex;
     align-items:baseline;
-    justify-content:space-between;
-    gap:12px;
+    justify-content:center;
+    gap:clamp(3px,.4cqw,6px);
     min-width:0;
-    padding-top:clamp(9px,1.6cqh,14px);
-    border-top:1px solid rgba(10,10,10,.28);
+    padding-top:clamp(10px,1.7cqh,15px);
+    border-top:1px solid #0a0a0a;
+    text-align:center;
+  }
+  .detail-intro-from{
+    flex:0 0 auto;
+    color:rgba(10,10,10,.56);
+    font:400 clamp(10px,.86cqw,12px)/1.3 var(--serif);
+    letter-spacing:.02em;
   }
   .detail-intro-team{
     overflow:hidden;
-    max-width:65%;
-    font:500 clamp(11px,.95cqw,14px)/1.3 var(--serif);
-    text-align:right;
-    text-overflow:ellipsis;
-    white-space:nowrap;
+    min-width:0;
+    font:500 clamp(11px,.96cqw,14px)/1.3 var(--serif);
+    overflow-wrap:anywhere;
   }
 
   .detail-main{
@@ -689,254 +728,488 @@
     min-width:0;
     min-height:0;
   }
+  /* The video panel is an empty frame: four corner marks hug the contained
+     clip and nothing else is drawn inside. */
   .detail-video{
     position:absolute;
     top:13.4%;
-    right:7%;
+    right:3.8%;
     bottom:13.4%;
     left:2.7%;
     display:grid;
     place-items:center;
     margin:0;
+    padding:clamp(10px,3.3%,26px);
     border:1px solid #0a0a0a;
     background:transparent;
     overflow:hidden;
+    cursor:pointer;
+    /* The marks live in the padding ring: the mirror composites the video on
+       top of the canvas, so anything painted inside the clip would vanish. */
+    --video-corner-size:clamp(14px,2.8cqw,30px);
+    --video-corner-stroke:2px;
+    --video-corner-offset:calc(-0.5 * var(--video-corner-size));
   }
-  .detail-video-top,
-  .detail-video-foot{
-    position:absolute;
-    right:clamp(12px,2.2cqw,28px);
-    left:clamp(12px,2.2cqw,28px);
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    gap:12px;
-    color:rgba(10,10,10,.62);
-  }
-  .detail-video-top{top:clamp(10px,2cqh,18px)}
-  .detail-video-foot{bottom:clamp(10px,2cqh,18px)}
-  .detail-video-mark{
-    display:grid;
-    place-items:center;
-    gap:clamp(8px,1.4cqh,13px);
-    text-align:center;
-  }
-  .detail-video-word{
-    font:500 clamp(26px,3.5cqw,52px)/1 var(--serif);
-    letter-spacing:-.035em;
-  }
-  .detail-video-sub{
-    color:rgba(10,10,10,.48);
-    font:400 clamp(8px,.8cqw,10px)/1.4 var(--serif);
-    letter-spacing:.12em;
-    text-transform:uppercase;
-  }
-
-  .detail-side{
-    position:absolute;
-    top:24.5%;
-    right:1.8%;
-    z-index:2;
-    display:flex;
-    flex-direction:column;
-    width:23.2%;
-    height:82.5%;
+  .detail-video-stage{
+    position:relative;
+    isolation:isolate;
+    width:100%;
+    height:100%;
+    min-width:0;
     min-height:0;
-    border:1px solid #0a0a0a;
-    background:#ffffff;
-  }
-  .detail-side-head{
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    gap:8px;
-    padding:clamp(10px,1.8cqh,18px) clamp(10px,1.2cqw,16px);
-    border-bottom:1px solid rgba(10,10,10,.24);
-  }
-  .detail-side-figure{
-    display:flex;
-    align-items:flex-end;
-    flex:1;
-    min-height:0;
-    padding:clamp(12px,2.4cqh,24px) clamp(8px,1.2cqw,16px);
-  }
-  .detail-side-index{
-    color:#0a0a0a;
-    font:600 clamp(64px,10.2cqw,136px)/.74 var(--serif);
-    letter-spacing:-.08em;
-    font-variant-numeric:tabular-nums;
-  }
-  .detail-side-index.is-podium{color:var(--red)}
-  .detail-side-awards{
-    display:grid;
-    justify-items:start;
-    gap:clamp(4px,.8cqh,7px);
-    margin:0 clamp(8px,1cqw,14px) clamp(9px,1.5cqh,13px);
-  }
-  .detail-side-award{
-    display:inline-block;
-    overflow:hidden;
-    max-width:100%;
-    padding:clamp(3px,.6cqh,5px) clamp(6px,1cqw,10px);
-    border:1px solid rgba(10,10,10,.42);
-    color:rgba(10,10,10,.66);
-    font:600 clamp(13px,1.65cqw,22px)/1.2 var(--serif);
-    letter-spacing:.02em;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .detail-side-award.is-award{
-    border-color:var(--red);
-    color:var(--red);
-  }
-  .detail-side-meta{
-    overflow:hidden;
-    color:rgba(10,10,10,.52);
-    font:400 clamp(9px,.8cqw,11px)/1.35 var(--serif);
-    letter-spacing:.08em;
-    text-overflow:ellipsis;
-    text-transform:uppercase;
-    white-space:nowrap;
-  }
-  .detail-cta{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
-    min-height:20.5%;
-    padding:clamp(10px,1.8cqh,18px) clamp(10px,1.2cqw,16px);
-    border-top:1px solid #0a0a0a;
     pointer-events:none;
   }
-  .detail-cta-copy{
-    display:grid;
-    gap:clamp(4px,.7cqh,7px);
-    min-width:0;
-  }
-  .detail-cta-title{
+  /* The window clips both the stacked clips and the loading veil, so the veil
+     can slide in from below and leave through the top without spilling. */
+  .detail-video-window{
+    position:absolute;
+    inset:0;
     overflow:hidden;
-    font:500 clamp(12px,1.3cqw,16px)/1.15 var(--serif);
-    letter-spacing:-.01em;
-    text-overflow:ellipsis;
-    white-space:nowrap;
+    isolation:isolate;
   }
-  .detail-cta-sub{
-    overflow:hidden;
-    color:rgba(10,10,10,.48);
-    font:400 clamp(7px,.66cqw,9px)/1.2 var(--serif);
-    letter-spacing:.1em;
-    text-overflow:ellipsis;
-    text-transform:uppercase;
-    white-space:nowrap;
+  .detail-video-deck{
+    position:absolute;
+    inset:0;
   }
-  .detail-cta-arrow{
-    flex:0 0 auto;
-    width:clamp(9px,.85cqw,12px);
-    height:clamp(18px,1.7cqw,24px);
-  }
-  .detail-cta-arrow svg{
+  .detail-video-slot{
+    position:absolute;
+    inset:0;
     display:block;
     width:100%;
     height:100%;
-    fill:none;
-    stroke:currentColor;
-    stroke-width:1.5;
-    vector-effect:non-scaling-stroke;
+    visibility:hidden;
+    object-fit:contain;
+    object-position:center;
+    pointer-events:none;
+    user-select:none;
+    -webkit-user-drag:none;
+  }
+  .detail-video-slot.is-active{visibility:visible}
+  /* Placeholder card for works that have no clip yet. It sits on the deck so
+     the corner marks and the empty frame keep framing it. */
+  .detail-video-placeholder{
+    position:absolute;
+    inset:0;
+    z-index:1;
+    display:none;
+    align-content:center;
+    justify-items:center;
+    gap:clamp(8px,1.6cqh,14px);
+    padding:clamp(12px,4%,30px);
+    color:rgba(10,10,10,.46);
+    text-align:center;
+  }
+  .detail-video.is-video-empty .detail-video-placeholder{display:grid}
+  .detail-video-placeholder-title{
+    font:500 clamp(15px,1.5cqw,22px)/1.1 var(--serif);
+    letter-spacing:.02em;
+  }
+  .detail-video-placeholder-sub{
+    font:400 clamp(8px,.72cqw,10px)/1 var(--serif);
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:rgba(10,10,10,.3);
+  }
+  .detail-video-veil{
+    position:absolute;
+    inset:0;
+    z-index:2;
+    display:grid;
+    align-content:center;
+    justify-items:center;
+    gap:clamp(8px,1.8cqh,14px);
+    padding:clamp(14px,5%,36px);
+    background:#ffffff;
+    color:#0a0a0a;
+    text-align:center;
+    translate:0 var(--veil-y,101%);
+    transition:translate var(--veil-duration,280ms) cubic-bezier(.22,.72,.24,1);
+    pointer-events:none;
+    will-change:translate;
+  }
+  .detail-video-veil.is-instant{transition:none}
+  .detail-video-veil-kicker{
+    color:rgba(10,10,10,.45);
+    font:400 clamp(8px,.72cqw,10px)/1 var(--serif);
+    letter-spacing:.22em;
+    text-transform:uppercase;
+  }
+  .detail-video-veil-name{
+    overflow:hidden;
+    max-width:100%;
+    font:500 clamp(16px,1.8cqw,26px)/1.1 var(--serif);
+    letter-spacing:-.02em;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .detail-video-veil-track{
+    display:block;
+    overflow:hidden;
+    width:min(62%,260px);
+    height:2px;
+    background:rgba(10,10,10,.16);
+  }
+  /* While the clip is still short of `canplay` the bar is accented; it turns
+     to ink only once the clip is ready to start. */
+  .detail-video-veil-bar{
+    display:block;
+    width:0;
+    height:100%;
+    background:var(--red);
+    transition:width .18s linear;
+  }
+  .detail-video-veil.is-ready .detail-video-veil-bar{background:#0a0a0a}
+  .detail-video-veil.is-indeterminate .detail-video-veil-bar{
+    width:34%;
+    animation:detail-veil-sweep 1.1s ease-in-out infinite;
+  }
+  .detail-video-veil.is-error .detail-video-veil-bar{
+    width:100%;
+    background:var(--red);
+    animation:none;
+  }
+  .detail-video-veil.is-error .detail-video-veil-meta{
+    color:var(--red);
+  }
+  .detail-video-veil-meta{
+    color:rgba(10,10,10,.45);
+    font:400 clamp(8px,.7cqw,10px)/1 var(--serif);
+    letter-spacing:.14em;
+    font-variant-numeric:tabular-nums;
+  }
+  /* Stall layer: an instant, translucent "Loading" sheet used while playback
+     is rebuffering. It has no transition on purpose. */
+  .detail-video-stall{
+    position:absolute;
+    inset:0;
+    z-index:1;
+    display:grid;
+    place-items:center;
+    background:rgba(255,255,255,.72);
+    color:#0a0a0a;
+    pointer-events:none;
+  }
+  .detail-video-stall[hidden]{display:none}
+  .detail-video-stall-label{
+    font:400 clamp(8px,.72cqw,10px)/1 var(--serif);
+    letter-spacing:.24em;
+    text-transform:uppercase;
+  }
+  @keyframes detail-veil-sweep{
+    0%{transform:translateX(-110%)}
+    100%{transform:translateX(320%)}
+  }
+  .detail-video-corner{
+    position:absolute;
+    z-index:2;
+    width:var(--video-corner-size);
+    height:var(--video-corner-size);
+    border:0 solid #0a0a0a;
+  }
+  .detail-video-corner.is-tl{
+    top:var(--video-corner-offset);
+    left:var(--video-corner-offset);
+    border-top-width:var(--video-corner-stroke);
+    border-left-width:var(--video-corner-stroke);
+  }
+  .detail-video-corner.is-tr{
+    top:var(--video-corner-offset);
+    right:var(--video-corner-offset);
+    border-top-width:var(--video-corner-stroke);
+    border-right-width:var(--video-corner-stroke);
+  }
+  .detail-video-corner.is-bl{
+    bottom:var(--video-corner-offset);
+    left:var(--video-corner-offset);
+    border-bottom-width:var(--video-corner-stroke);
+    border-left-width:var(--video-corner-stroke);
+  }
+  .detail-video-corner.is-br{
+    right:var(--video-corner-offset);
+    bottom:var(--video-corner-offset);
+    border-right-width:var(--video-corner-stroke);
+    border-bottom-width:var(--video-corner-stroke);
+  }
+  .detail-video:focus-visible{
+    outline:2px solid #0a0a0a;
+    outline-offset:3px;
+  }
+
+  /* Tools stack: the volume slider sits directly above the action tray and
+     shares its reveal rules, so hovering the video shows both together. */
+  .detail-tools{
+    position:absolute;
+    /* Leaves room for the deepest parallax shift (0.52 × 24px) so the stack
+       never drifts past the content edge while it is closed. */
+    right:4.2%;
+    bottom:6.5%;
+    z-index:3;
+    display:flex;
+    flex-direction:column;
+    gap:clamp(6px,1.1cqh,10px);
+    width:clamp(150px,22.5%,310px);
+    min-width:0;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    translate:14px 16px;
+    transition:
+      opacity .2s ease,
+      visibility .2s,
+      translate .2s ease;
+  }
+  /* Keyboard focus keeps the stack open; a mouse click on the slider must not
+     (focus-within would otherwise pin it until the user clicks elsewhere). */
+  .detail-main.is-actions-pinned .detail-tools,
+  .detail-tools:has(:focus-visible){
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+    translate:10px 12px;
+  }
+  @media (hover:hover) and (pointer:fine){
+    .detail-main:not(.is-actions-dismissed) .detail-video:hover ~ .detail-tools,
+    .detail-main:not(.is-actions-dismissed) .detail-tools:hover{
+      opacity:1;
+      visibility:visible;
+      pointer-events:auto;
+      translate:10px 12px;
+    }
+  }
+  .detail-volume{
+    display:flex;
+    align-items:center;
+    gap:clamp(6px,.8cqw,10px);
+    padding:clamp(7px,1.1cqh,11px) clamp(10px,1.1cqw,15px);
+    border:1px solid #0a0a0a;
+    background:#ffffff;
+    color:#0a0a0a;
+  }
+  .detail-volume-label{
+    flex:0 0 auto;
+    font:400 clamp(8px,.72cqw,11px)/1 var(--serif);
+    letter-spacing:.16em;
+    text-transform:uppercase;
+  }
+  .detail-volume-range{
+    flex:1 1 auto;
+    min-width:0;
+    height:14px;
+    margin:0;
+    accent-color:var(--red);
+    cursor:pointer;
+  }
+  .detail-volume-range:focus-visible{
+    outline:2px solid #0a0a0a;
+    outline-offset:2px;
+  }
+  .detail-volume-value{
+    flex:0 0 auto;
+    min-width:2.2em;
+    font:400 clamp(9px,.78cqw,11px)/1 var(--serif);
+    font-variant-numeric:tabular-nums;
+    text-align:right;
+  }
+  /* A bare tray of action buttons; with no header or close chrome, the
+     buttons themselves are the panel. */
+  .detail-actions{
+    display:flex;
+    flex-direction:column;
+    gap:clamp(6px,1.1cqh,10px);
+    min-width:0;
+    border:0;
+    background:transparent;
+  }
+  .detail-action{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:8px;
+    width:100%;
+    padding:clamp(10px,1.6cqh,15px) clamp(10px,1.1cqw,15px);
+    border:1px solid #0a0a0a;
+    background:#ffffff;
+    color:#0a0a0a;
+    font:500 clamp(15px,1.45cqw,21px)/1.2 var(--serif);
+    text-align:left;
+    cursor:pointer;
+    transition:
+      background-color .16s ease,
+      color .16s ease,
+      border-color .16s ease;
+  }
+  /* Download is the primary action: accent outline and accent label. */
+  .detail-action.is-download{
+    border-color:var(--red);
+    color:var(--red);
+  }
+  .detail-action:hover:not(:disabled){
+    border-color:#0a0a0a;
+    background:#0a0a0a;
+    color:#ffffff;
+  }
+  .detail-action.is-download:hover:not(:disabled){
+    border-color:var(--red);
+    background:var(--red);
+    color:#ffffff;
+  }
+  .detail-action:focus-visible{
+    outline:2px solid #0a0a0a;
+    outline-offset:2px;
+  }
+  .detail-action.is-download:focus-visible{outline-color:var(--red)}
+  /* Placeholder state: the outline and label fade back so the tray reads as
+     inactive without losing its white face. */
+  .detail-action:disabled{
+    border-color:rgba(10,10,10,.22);
+    background:rgba(255,255,255,.62);
+    color:rgba(10,10,10,.34);
+    cursor:default;
+  }
+  .detail-action.is-download:disabled{
+    border-color:rgba(216,74,51,.34);
+    background:rgba(255,255,255,.62);
+    color:rgba(216,74,51,.56);
+  }
+  .detail-action-sub{
+    flex:0 0 auto;
+    color:inherit;
+    opacity:.45;
+    font:400 clamp(9px,.8cqw,11px)/1.2 var(--serif);
+    letter-spacing:.09em;
+    text-transform:uppercase;
   }
 
   .detail-footer{
     grid-column:1/-1;
     grid-row:2;
-    display:grid;
-    grid-template-columns:24% minmax(0,1fr);
-    align-items:center;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
     min-width:0;
     min-height:0;
-    padding:0;
-  }
-  .detail-award{
-    display:flex;
-    align-items:center;
-    justify-self:center;
-    gap:clamp(4px,.55cqw,8px);
-    max-width:100%;
-    min-width:0;
-    padding-left:0;
-  }
-  .detail-award-rank{
-    margin-right:clamp(3px,.4cqw,5px);
-    color:#0a0a0a;
-    font:700 clamp(22px,3cqw,39px)/1 var(--serif);
-    letter-spacing:-.04em;
-    font-variant-numeric:tabular-nums;
-  }
-  .detail-award.is-podium .detail-award-rank{color:var(--red)}
-  .detail-award-name{
-    display:inline-block;
-    overflow:hidden;
-    min-width:0;
-    padding:clamp(2px,.35cqh,4px) clamp(5px,.7cqw,8px);
-    border:1px solid rgba(10,10,10,.42);
-    color:rgba(10,10,10,.66);
-    font:500 clamp(14px,1.68cqw,22px)/1.15 var(--serif);
-    letter-spacing:-.01em;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .detail-award.is-award .detail-award-name{
-    border-color:var(--red);
-    color:var(--red);
+    padding:0 clamp(16px,4.6cqw,52px) clamp(7px,1.5cqh,12px);
   }
   .detail-switcher{
     display:flex;
     align-items:center;
     justify-content:center;
-    gap:clamp(26px,6.8cqw,82px);
+    gap:clamp(12px,2.2cqw,30px);
+    width:min(38cqw,430px);
     min-width:0;
   }
+  /* Standalone copy of the deck paging chrome: same box and glyph face, but
+     the box stays bare and only draws its border on hover. */
   .detail-switch-button{
-    display:grid;
-    place-items:center;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
     flex:0 0 auto;
-    width:clamp(24px,2.8cqw,38px);
-    height:clamp(30px,4.2cqw,56px);
+    width:40px;
+    height:34px;
+    min-width:0;
+    padding:0;
+    border:1px solid transparent;
+    border-radius:0;
+    background:transparent;
+    color:#0a0a0a;
+    font:400 16px/1 var(--mono);
+    cursor:pointer;
+    transition:border-color .16s ease;
+  }
+  .detail-switch-button:hover:not(:disabled){border-color:#0a0a0a}
+  .detail-switch-arrow{font-size:16px;line-height:1;letter-spacing:0}
+  /* Equal dash segments with no gap: only the current work's dash turns solid
+     black, so the pager reads as a marked progress line. */
+  .detail-pager{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:1 1 auto;
+    min-width:0;
+    /* Generous hover band: twice the old 14–20px hit area, capped so the footer
+       row never grows past the switch buttons. */
+    height:clamp(28px,4.4cqh,34px);
+  }
+  /* Each dash is a full-height button so it has a usable hit area; the visible
+     rule is its ::before, which thickens on hover/focus. */
+  .detail-pager-dash{
+    position:relative;
+    flex:1 1 0;
+    min-width:0;
+    height:100%;
     padding:0;
     border:0;
     background:transparent;
-    color:#0a0a0a;
     cursor:pointer;
   }
-  .detail-switch-button svg{
-    display:block;
-    width:clamp(10px,1.4cqw,18px);
-    height:clamp(22px,3.6cqw,44px);
-    fill:none;
-    stroke:currentColor;
-    stroke-width:1.5;
-    vector-effect:non-scaling-stroke;
-    transition:transform .18s ease;
+  .detail-pager-dash::before{
+    content:"";
+    position:absolute;
+    top:50%;
+    right:0;
+    left:0;
+    height:2px;
+    margin-top:-1px;
+    background:rgba(10,10,10,.22);
+    transition:height .16s ease,margin-top .16s ease,background-color .2s ease;
   }
-  .detail-switch-button:hover:not(:disabled) svg{transform:translateX(-2px)}
-  .detail-switch-button:last-child:hover:not(:disabled) svg{transform:translateX(2px)}
-  .detail-switch-button:disabled{opacity:.26;cursor:default}
-  .detail-switch-button:focus-visible{
-    outline:1px solid #0a0a0a;
-    outline-offset:3px;
+  /* The current mark is twice as thick as the idle dashes. */
+  .detail-pager-dash.is-current::before{
+    height:4px;
+    margin-top:-2px;
+    background:#0a0a0a;
   }
-  .detail-work{
-    overflow:hidden;
-    max-width:44cqw;
-    margin:0;
-    font:500 clamp(19px,2.55cqw,34px)/1.15 var(--serif);
-    letter-spacing:-.025em;
-    text-align:center;
-    text-overflow:ellipsis;
-    white-space:nowrap;
+  .detail-pager-dash.is-current{cursor:default}
+  .detail-pager-dash:not(.is-current):hover::before,
+  .detail-pager-dash:not(.is-current):focus-visible::before{
+    height:24px;
+    margin-top:-12px;
   }
+  .detail-pager-dash:focus-visible{outline:none}
+  .detail-pager-dash:focus-visible::before{background:#0a0a0a}
 
   .slide-detail .micro{
     font-family:var(--serif);
     letter-spacing:.09em;
+  }
+
+  /* Closing page: the logo lockup sits in the middle of the two diagonal cuts.
+     The copy under the logo is deliberately muted — it is placeholder detail
+     for the real credits. */
+  .slide-end{
+    padding:0;
+    place-items:center;
+  }
+  .end-lockup{
+    display:grid;
+    justify-items:center;
+    gap:clamp(20px,5.2cqh,44px);
+    text-align:center;
+  }
+  .end-logo{
+    display:block;
+    width:clamp(150px,21cqw,330px);
+    height:auto;
+    color:#0a0a0a;
+  }
+  .end-note{
+    display:grid;
+    justify-items:center;
+    gap:clamp(6px,1.1cqh,10px);
+    margin:0;
+  }
+  .end-note-main{
+    color:rgba(10,10,10,.46);
+    font:400 clamp(13px,1.5cqw,20px)/1.35 var(--serif);
+    letter-spacing:.05em;
+  }
+  /* Chinese credit line: tighter tracking than the old uppercase label and a
+     slightly larger floor so the characters stay legible. */
+  .end-note-sub{
+    color:rgba(10,10,10,.32);
+    font:400 clamp(9px,.9cqw,12.5px)/1.4 var(--mono);
+    letter-spacing:.05em;
   }
 
   .deck-controls{
@@ -993,10 +1266,11 @@
       gap:6px;
     }
     .rank-criteria{gap:4px 14px}
-    .detail-side{right:1.5%}
-    .detail-side-index{font-size:clamp(56px,9.2cqw,104px)}
-    .detail-cta-title{font-size:clamp(11px,1.2cqw,14px)}
-    .detail-switcher{gap:clamp(20px,4.4cqw,56px)}
+    .detail-tools{right:4.2%}
+    .detail-switcher{
+      gap:clamp(12px,2.4cqw,26px);
+      width:min(38cqw,360px);
+    }
   }
 
   @media (max-width:700px){
@@ -1013,7 +1287,17 @@
     .cover-brand-text{font-size:clamp(18px,6.4cqw,28px)}
     .cover-date{font-size:clamp(11px,3.8cqw,18px)}
     .cover-title{font-size:clamp(30px,12.2cqw,60px)}
-    .cover-side{width:62%;max-width:320px;justify-self:end}
+    .cover-side{width:58.5cqw;max-width:320px}
+    .cover-lockup{
+      position:absolute;
+      right:8px;
+      bottom:calc(
+        40.84cqw * var(--cover-art-scale) +
+        14px
+      );
+      left:8px;
+      z-index:1;
+    }
     .slide-quadrants{padding:0}
     .quadrant-stage{
       --quadrant-shift-x:clamp(5px,2.4cqw,18px);
@@ -1059,62 +1343,86 @@
     .rank-metrics{gap:7px}
     .rank-score{font-size:28px}
     .slide-detail{padding:0}
+    .slide-end{padding:0}
     .detail-layout{
       grid-template-columns:minmax(0,1fr);
-      grid-template-rows:24% 66% 10%;
+      grid-template-rows:24% 69% 7%;
     }
-    .detail-intro{grid-column:1;grid-row:1;padding:8px 12px}
+    .detail-intro{grid-column:1;grid-row:1;padding:6px 10px}
     .detail-intro-card{
-      gap:7px;
-      padding:10px 16px;
+      gap:5px;
+      padding:0;
     }
-    .detail-intro-copy{gap:4px}
-    .detail-intro-title{font-size:clamp(19px,5.6cqw,25px)}
+    .detail-intro-copy{gap:5px}
+    .detail-intro-title{
+      padding:6px 10px;
+      font-size:clamp(18px,5.4cqw,24px);
+    }
     .detail-intro-body{
       display:-webkit-box;
       overflow:hidden;
       max-width:100%;
+      padding:0;
       font-size:10.5px;
       line-height:1.45;
       -webkit-box-orient:vertical;
       -webkit-line-clamp:2;
     }
-    .detail-intro-meta{padding-top:5px}
-    .detail-intro-team{max-width:70%;font-size:9px}
+    .detail-intro-meta{
+      padding-top:4px;
+      border-top-width:1px;
+    }
+    .detail-intro-from{font-size:8px}
+    .detail-intro-team{font-size:9px}
     .detail-main{grid-column:1;grid-row:2}
     .detail-video{
-      top:6px;
+      top:50%;
       right:12px;
-      bottom:6px;
+      bottom:auto;
       left:12px;
+      height:auto;
+      aspect-ratio:988/586;
+      padding:11px;
+      translate:0 -50%;
+      --video-corner-size:13px;
+      --video-corner-stroke:2px;
+      --video-corner-offset:calc(-0.5 * var(--video-corner-size));
     }
-    .detail-video-top{top:8px;right:10px;left:10px}
-    .detail-video-foot{right:10px;bottom:8px;left:10px}
-    .detail-video-word{font-size:clamp(24px,7.2cqw,32px)}
-    .detail-video-sub{font-size:7px}
-    .detail-side{display:none}
-    .art[data-rule-mode="detail"] .sheet-rule-a{opacity:0}
+    .detail-tools{
+      right:3%;
+      bottom:4%;
+      width:58%;
+      translate:6px 8px;
+    }
+    .detail-main.is-actions-pinned .detail-tools,
+    .detail-tools:has(:focus-visible){
+      translate:4px 6px;
+    }
+    @media (hover:hover) and (pointer:fine){
+      .detail-main:not(.is-actions-dismissed) .detail-video:hover ~ .detail-tools,
+      .detail-main:not(.is-actions-dismissed) .detail-tools:hover{
+        translate:4px 6px;
+      }
+    }
+    .detail-actions{gap:5px}
+    .detail-action{
+      padding:8px 10px;
+      font-size:15px;
+    }
+    .detail-volume{padding:6px 9px}
     .detail-footer{
       grid-column:1;
       grid-row:3;
       display:flex;
-      flex-direction:column;
-      align-items:center;
+      align-items:flex-end;
       justify-content:center;
-      gap:0;
-      padding:2px 12px;
+      padding:0 12px clamp(7px,1.5cqh,12px);
     }
-    .detail-award{padding-left:0}
-    .detail-award-rank{font-size:22px}
-    .detail-award-name{font-size:14px}
     .detail-switcher{
       justify-content:center;
-      width:100%;
+      width:min(84cqw,390px);
       gap:clamp(10px,3.4cqw,18px);
     }
-    .detail-switch-button{width:24px;height:30px}
-    .detail-switch-button svg{width:10px;height:20px}
-    .detail-work{max-width:70cqw;font-size:clamp(18px,5.4cqw,23px)}
   }
   @media (max-width:560px){
     .deck-controls{padding:12px}
@@ -1126,179 +1434,35 @@
       font-size:15px;
     }
     .deck-arrow{font-size:15px}
-    .tuner{top:auto;right:12px;bottom:12px;width:calc(100vw - 24px);max-height:calc(100vh - 24px)}
-    .tuner-body{max-height:62vh}
+    .detail-switch-button{width:36px;height:32px;font-size:15px}
+    .detail-switch-arrow{font-size:15px}
   }
   @media (hover:none), (pointer:coarse){
     .quadrant-pointer{display:none}
   }
   @media (prefers-reduced-motion:reduce){
-    .deck-button{transition-duration:.01ms}
+    .deck-button,
+    .detail-switch-button{transition-duration:.01ms}
     .sheet-rule{transition-duration:.01ms}
     .structure-veil{transition:none}
     .quadrant-pointer,
     .quadrant-title,
-    .quadrant-detail{transition-duration:.01ms}
+    .quadrant-detail,
+    .detail-tools,
+    .detail-action,
+    .detail-pager-dash,
+    .detail-video-veil,
+    .detail-video-veil-bar{transition-duration:.01ms}
+    .detail-video-veil.is-indeterminate .detail-video-veil-bar{animation:none;width:100%}
   }
 
   /* The WebGL composite draws its own full-resolution edge skirt, so there is
      no DOM seam overlay here. */
 
-  /* Floating tuning panel: outside the mirror stage, never captured. */
-  .tuner{
-    position:fixed;
-    top:auto;
-    right:16px;
-    bottom:16px;
-    z-index:70;
-    width:min(312px,calc(100vw - 32px));
-    max-height:calc(100vh - 32px);
-    display:flex;
-    flex-direction:column;
-    overflow:hidden;
-    border:1px solid rgba(232,223,202,.16);
-    border-radius:16px;
-    background:rgba(17,23,19,.93);
-    box-shadow:0 24px 70px -24px #000;
-    -webkit-backdrop-filter:blur(14px);
-    backdrop-filter:blur(14px);
-    color:var(--paper);
-    font-family:var(--mono);
-    font-size:10px;
-  }
-  .tuner.is-collapsed{width:auto}
-  .tuner-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
-    padding:10px 12px;
-    border-bottom:1px solid rgba(232,223,202,.12);
-    flex:0 0 auto;
-  }
-  .tuner-title{
-    color:var(--red);
-    font-size:9px;
-    letter-spacing:.2em;
-  }
-  .tuner-toggle{
-    width:24px;
-    height:24px;
-    padding:0;
-    border:1px solid rgba(232,223,202,.22);
-    border-radius:50%;
-    background:transparent;
-    color:var(--paper);
-    font:14px/1 var(--mono);
-    cursor:pointer;
-  }
-  .tuner-toggle:hover{background:rgba(232,223,202,.08)}
-  .tuner-body{
-    display:grid;
-    gap:14px;
-    padding:12px;
-    overflow:auto;
-  }
-  .tuner-body[hidden]{display:none}
-  .tuner-section{display:grid;gap:6px}
-  .tuner-label{
-    margin:0;
-    color:rgba(232,223,202,.48);
-    font-size:8px;
-    letter-spacing:.18em;
-    text-transform:uppercase;
-  }
-  .tuner-row{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
-    min-height:24px;
-  }
-  .tuner-row label,
-  .tuner-row .tuner-fixed{color:rgba(232,223,202,.72)}
-  .tuner-value{
-    color:var(--paper);
-    font-variant-numeric:tabular-nums;
-  }
-  .tuner input[type="range"]{
-    width:100%;
-    height:16px;
-    margin:0;
-    accent-color:var(--red);
-  }
-  .tuner input[type="color"]{
-    width:32px;
-    height:22px;
-    padding:0;
-    border:1px solid rgba(232,223,202,.22);
-    border-radius:5px;
-    background:transparent;
-    cursor:pointer;
-  }
-  .tuner select,
-  .tuner input[type="text"]{
-    min-height:26px;
-    padding:0 7px;
-    border:1px solid rgba(232,223,202,.2);
-    border-radius:7px;
-    background:#0b0f0c;
-    color:var(--paper);
-    font:10px/1 var(--mono);
-  }
-  .tuner select:disabled,
-  .tuner input:disabled{
-    opacity:.35;
-    cursor:not-allowed;
-  }
-  .tuner-readout{
-    padding-top:10px;
-    border-top:1px solid rgba(232,223,202,.12);
-    color:rgba(232,223,202,.54);
-    font-size:9px;
-    line-height:1.7;
-    white-space:pre-line;
-  }
-  .tuner-actions{
-    display:flex;
-    gap:8px;
-    padding-top:2px;
-  }
-  .tuner-actions button{
-    flex:1;
-    min-height:32px;
-    padding:0 9px;
-    border:1px solid rgba(232,223,202,.22);
-    border-radius:8px;
-    background:transparent;
-    color:var(--paper);
-    font:9px/1 var(--mono);
-    letter-spacing:.06em;
-    cursor:pointer;
-  }
-  .tuner-actions button:hover{background:rgba(232,223,202,.08)}
-  .tuner-actions button:first-child{
-    border-color:var(--red);
-    background:var(--red);
-    color:#0b0d0b;
-  }
-  .tuner-actions button:first-child:hover{background:#e35a42}
-  .tuner-status{
-    min-height:12px;
-    margin:0;
-    color:rgba(232,223,202,.42);
-    font-size:8px;
-    letter-spacing:.05em;
-  }
-  .tuner button:focus-visible,
-  .tuner input:focus-visible,
-  .tuner select:focus-visible{
-    outline:2px solid var(--red);
-    outline-offset:2px;
-  }
-
   /* Full-screen structure diagram, pulsed by the mirror's resize event.
-     The four hatched regions are the mirror bands around the content. */
+     The four hatched regions are the mirror bands around the content.
+     Entering fades in over 500ms; leaving is deliberately quicker (250ms) so
+     the resizeEnd-to-gone time stays around 0.7s. */
   .structure-veil{
     position:fixed;
     inset:0;
@@ -1309,7 +1473,7 @@
     opacity:0;
     visibility:hidden;
     pointer-events:none;
-    transition:opacity .5s ease,visibility 0s linear .5s;
+    transition:opacity .25s ease,visibility 0s linear .25s;
     --content-x:14%;
     --content-y:14%;
     --content-w:72%;
@@ -1651,10 +1815,8 @@
               </div>
               <h1 class="cover-title" data-parallax="0.44" data-fade data-fade-in-delay="140" data-fade-out-delay="20">参赛作品展示</h1>
             </div>
-            <figure class="cover-side" data-fade data-fade-in-delay="190" data-fade-out-delay="10" aria-label="ellia sideview 图片占位">
-              <svg viewBox="0 0 100 64" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-                <path d="M1 63 L99 1 L99 63 Z"/>
-              </svg>
+            <figure class="cover-side" data-fade data-fade-in-delay="190" data-fade-out-delay="10">
+              <img src="assets/ellia-sideview-flat-clipped.png" alt="ellia sideview" draggable="false" decoding="async">
             </figure>
           </div>
         </section>
@@ -1747,81 +1909,90 @@
 
         <section class="slide slide-detail" data-slide="3" aria-roledescription="slide" aria-label="作品详情" aria-hidden="true">
           <div class="detail-layout">
-            <aside class="detail-intro" data-fade data-fade-in-delay="0" data-fade-out-delay="60">
+            <aside class="detail-intro" data-parallax="0.16" data-fade data-fade-in-delay="0" data-fade-out-delay="60">
               <div class="detail-intro-card">
                 <div class="detail-intro-copy">
-                  <span class="micro">03 / Work</span>
-                  <h2 class="detail-intro-title">作品介绍</h2>
+                  <h2 class="detail-intro-title" id="detailWork" aria-live="polite">镜界</h2>
                   <p class="detail-intro-body">每件作品都从“镜”出发。创作说明与队伍自述将在这里展开。</p>
                 </div>
                 <div class="detail-intro-meta">
-                  <span class="micro">Team</span>
+                  <span class="detail-intro-from">来自：</span>
                   <strong class="detail-intro-team" id="detailTeam">吴彦组</strong>
                 </div>
               </div>
             </aside>
 
             <div class="detail-main">
-              <figure class="detail-video" data-fade data-fade-in-delay="45" data-fade-out-delay="45" aria-label="作品视频占位">
-                <div class="detail-video-top">
-                  <span class="micro">Demo Reel</span>
-                  <span class="micro" id="detailVideoCount">01 / 15</span>
+              <figure class="detail-video has-video" id="detailVideoFrame" data-parallax="0.52" data-fade data-fade-in-delay="45" data-fade-out-delay="45" role="button" tabindex="0" aria-label="作品视频，点击显示操作" aria-controls="detailActions" aria-expanded="false">
+                <div class="detail-video-stage" id="detailVideoStage">
+                  <div class="detail-video-window">
+                    <div class="detail-video-deck" id="detailVideoDeck"></div>
+                    <div class="detail-video-placeholder" aria-hidden="true">
+                      <span class="detail-video-placeholder-title">暂无视频</span>
+                      <span class="detail-video-placeholder-sub">No clip yet</span>
+                    </div>
+                    <div class="detail-video-veil" id="detailVideoVeil" role="status" aria-live="polite" aria-hidden="true">
+                      <span class="detail-video-veil-kicker" id="detailVideoVeilKicker">Loading</span>
+                      <span class="detail-video-veil-name" id="detailVideoVeilName">镜界</span>
+                      <span class="detail-video-veil-track"><span class="detail-video-veil-bar" id="detailVideoVeilBar"></span></span>
+                      <span class="detail-video-veil-meta" id="detailVideoVeilMeta">0%</span>
+                    </div>
+                    <div class="detail-video-stall" id="detailVideoStall" role="status" aria-live="polite" hidden>
+                      <span class="detail-video-stall-label">Loading</span>
+                    </div>
+                  </div>
+                  <span class="detail-video-corner is-tl" aria-hidden="true"></span>
+                  <span class="detail-video-corner is-tr" aria-hidden="true"></span>
+                  <span class="detail-video-corner is-bl" aria-hidden="true"></span>
+                  <span class="detail-video-corner is-br" aria-hidden="true"></span>
                 </div>
-                <div class="detail-video-mark">
-                  <span class="detail-video-word">Video Panel</span>
-                  <span class="detail-video-sub">视频待接入 / Coming soon</span>
-                </div>
-                <figcaption class="detail-video-foot">
-                  <span class="micro">MIRROR / 2610</span>
-                  <span class="micro">16:9</span>
-                </figcaption>
               </figure>
 
-              <aside class="detail-side" data-fade data-fade-in-delay="90" data-fade-out-delay="30" aria-label="作品信息">
-                <div class="detail-side-head">
-                  <span class="micro">Featured</span>
-                  <span class="micro" id="detailSideCount">01</span>
+              <div class="detail-tools" id="detailTools" data-parallax="0.52">
+                <div class="detail-volume">
+                  <label class="detail-volume-label" for="detailVolume">音量</label>
+                  <input class="detail-volume-range" id="detailVolume" type="range" min="0" max="100" step="1" value="60" aria-label="视频音量">
+                  <span class="detail-volume-value" id="detailVolumeValue">60</span>
                 </div>
-                <div class="detail-side-figure">
-                  <span class="detail-side-index is-podium" id="detailIndex">01</span>
-                </div>
-                <div class="detail-side-awards">
-                  <span class="detail-side-award is-award" id="detailAward">完成度奖</span>
-                  <span class="detail-side-meta" id="detailAwardMeta">完成度 / 8.65</span>
-                </div>
-                <div class="detail-cta" aria-hidden="true">
-                  <span class="detail-cta-copy">
-                    <span class="detail-cta-title">查看作品</span>
-                    <span class="detail-cta-sub">View entry</span>
-                  </span>
-                  <span class="detail-cta-arrow">
-                    <svg viewBox="0 0 12 24" aria-hidden="true" focusable="false">
-                      <path d="M2 2 10 12 2 22"/>
-                    </svg>
-                  </span>
-                </div>
-              </aside>
+                <aside class="detail-actions" id="detailActions" aria-label="作品操作">
+                  <button class="detail-action is-download" type="button" data-link="download" disabled>
+                    <span>下载</span>
+                    <span class="detail-action-sub">Download</span>
+                  </button>
+                  <button class="detail-action" type="button" data-link="play" disabled>
+                    <span>在线游玩</span>
+                    <span class="detail-action-sub">Play online</span>
+                  </button>
+                  <button class="detail-action" type="button" data-link="project" disabled>
+                    <span>项目主页</span>
+                    <span class="detail-action-sub">Project page</span>
+                  </button>
+                </aside>
+              </div>
             </div>
 
             <footer class="detail-footer" data-fade data-fade-in-delay="135" data-fade-out-delay="0">
-              <div class="detail-award is-award is-podium">
-                <span class="detail-award-rank" id="detailAwardRank">01</span>
-                <span class="detail-award-name" id="detailFooterAward">完成度奖</span>
-              </div>
               <div class="detail-switcher">
                 <button class="detail-switch-button" id="detailPrev" type="button" aria-label="上一件作品">
-                  <svg viewBox="0 0 12 24" aria-hidden="true" focusable="false">
-                    <path d="M10 2 2 12 10 22Z"/>
-                  </svg>
+                  <span class="detail-switch-arrow" aria-hidden="true">←</span>
                 </button>
-                <h2 class="detail-work" id="detailWork" aria-live="polite">镜界</h2>
+                <div class="detail-pager" id="detailPager" role="group" aria-label="作品切换"></div>
                 <button class="detail-switch-button" id="detailNext" type="button" aria-label="下一件作品">
-                  <svg viewBox="0 0 12 24" aria-hidden="true" focusable="false">
-                    <path d="M2 2 10 12 2 22Z"/>
-                  </svg>
+                  <span class="detail-switch-arrow" aria-hidden="true">→</span>
                 </button>
               </div>
             </footer>
+          </div>
+        </section>
+
+        <section class="slide slide-end" data-slide="4" aria-roledescription="slide" aria-label="结束" aria-hidden="true">
+          <div class="end-lockup">
+            <img class="end-logo" src="../assets/mirror-26/cea-logo.svg" alt="CEA · 苏州大学计算机爱好者协会" draggable="false" decoding="async" data-parallax="0.2" data-fade data-fade-in-delay="60" data-fade-out-delay="40">
+            <!-- Placeholder detail: replace the two lines with the real credits. -->
+            <p class="end-note" data-parallax="0.34">
+              <span class="end-note-main" data-fade data-fade-in-delay="150" data-fade-out-delay="20">苏州大学计算机爱好者协会 · 2026.10</span>
+              <span class="end-note-sub" data-fade data-fade-in-delay="210" data-fade-out-delay="0">由 DarkskyX 设计并制作 · 含AI生成内容</span>
+            </p>
           </div>
         </section>
       </div>
@@ -1836,68 +2007,6 @@
       <span class="deck-arrow" aria-hidden="true">→</span>
     </button>
   </nav>
-
-  <aside class="tuner is-collapsed" id="tuner" aria-label="Mirror tuning panel">
-    <header class="tuner-head">
-      <span class="tuner-title">TUNE / 2610</span>
-      <button class="tuner-toggle" id="tuneToggle" type="button" aria-expanded="false" aria-controls="tuneBody">+</button>
-    </header>
-    <div class="tuner-body" id="tuneBody" hidden>
-      <section class="tuner-section">
-        <p class="tuner-label">Cover</p>
-        <div class="tuner-row">
-          <label for="tuneCoverBar">Line</label>
-          <span class="tuner-value" id="tuneCoverBarValue">3px</span>
-        </div>
-        <input id="tuneCoverBar" type="range" min="0" max="8" step="1" value="3" aria-label="Cover bottom line height">
-        <div class="tuner-row">
-          <span class="tuner-fixed">Gap</span>
-          <span class="tuner-value" id="tuneCoverGapFixed">32px</span>
-        </div>
-        <div class="tuner-row">
-          <span class="tuner-fixed">Text Y</span>
-          <span class="tuner-value" id="tuneCoverTextYFixed">0px</span>
-        </div>
-        <div class="tuner-row">
-          <label for="tuneCoverArtY">Image Y</label>
-          <span class="tuner-value" id="tuneCoverArtYValue">0px</span>
-        </div>
-        <input id="tuneCoverArtY" type="range" min="-160" max="80" step="1" value="0" aria-label="Cover image vertical translate">
-      </section>
-
-      <section class="tuner-section">
-        <p class="tuner-label">Surface</p>
-        <div class="tuner-row">
-          <label for="tuneParticle">Particle</label>
-          <input id="tuneParticle" type="color" value="#242622" aria-label="Rising particle color">
-        </div>
-        <div class="tuner-row">
-          <label for="tuneCenter">Center</label>
-          <input id="tuneCenter" type="color" value="#ffffff" aria-label="Center background color">
-        </div>
-      </section>
-
-      <section class="tuner-section">
-        <p class="tuner-label">Mirror</p>
-        <div class="tuner-row">
-          <span>Feather</span>
-          <span class="tuner-value" id="tuneFeatherFixed">72</span>
-        </div>
-        <div class="tuner-row">
-          <span>Backend</span>
-          <span class="tuner-value" id="tuneMode">—</span>
-        </div>
-      </section>
-
-      <div class="tuner-readout" id="tuneReadout">waiting for backend…</div>
-
-      <div class="tuner-actions">
-        <button id="tuneCopy" type="button">Copy config</button>
-        <button id="tuneReset" type="button">Reset</button>
-      </div>
-      <p class="tuner-status" id="tuneStatus"></p>
-    </div>
-  </aside>
 
   <div class="structure-veil" id="structureVeil" aria-hidden="true">
     <div class="structure-veil-frame"></div>
@@ -1944,11 +2053,12 @@
   import { fadeIn, fadeOut } from '../js/effects/fade.js';
   import { createParallax } from '../js/effects/parallax.js';
   import { loadThreeBundle } from '../libs/three/three-bundle-loader.js';
-  import { createContentField, PARTICLE_DEFAULTS } from './content-field.js';
+  import { createContentField } from './content-field.js';
 
   const stage = document.getElementById('stage');
   const art = document.getElementById('art');
   const contentCanvas = document.getElementById('contentField');
+  const coverImage = document.querySelector('.cover-side img');
   const deckControls = document.getElementById('deckControls');
   const deckPrev = document.getElementById('deckPrev');
   const deckNext = document.getElementById('deckNext');
@@ -1970,33 +2080,12 @@
   const questionBody = document.getElementById('questionBody');
   const questionNote = document.getElementById('questionNote');
   const questionActions = document.getElementById('questionActions');
-  const tuneBody = document.getElementById('tuneBody');
-  const tuneToggle = document.getElementById('tuneToggle');
-  const tuneMode = document.getElementById('tuneMode');
-  const tuneParticle = document.getElementById('tuneParticle');
-  const tuneCenter = document.getElementById('tuneCenter');
-  const tuneCoverBar = document.getElementById('tuneCoverBar');
-  const tuneCoverBarValue = document.getElementById('tuneCoverBarValue');
-  const tuneCoverGapFixed = document.getElementById('tuneCoverGapFixed');
-  const tuneCoverTextYFixed = document.getElementById('tuneCoverTextYFixed');
-  const tuneCoverArtY = document.getElementById('tuneCoverArtY');
-  const tuneCoverArtYValue = document.getElementById('tuneCoverArtYValue');
-  const tuneFeatherFixed = document.getElementById('tuneFeatherFixed');
-  const tuneReadout = document.getElementById('tuneReadout');
-  const tuneCopy = document.getElementById('tuneCopy');
-  const tuneReset = document.getElementById('tuneReset');
-  const tuneStatus = document.getElementById('tuneStatus');
 
-  const TUNE_KEY = 'mirror-2610:tune:v5';
-  const TUNE_DEFAULTS = Object.freeze({
+  // Fixed surface: the particle colour and the solid centre never change at
+  // runtime, so they are plain constants instead of a tuning state.
+  const SURFACE = Object.freeze({
     particle: '#242622',
-    center: '#ffffff',
-    coverBar: 3,
-    coverArtY: 0
-  });
-  const COVER_FIXED = Object.freeze({
-    gap: 32,
-    textY: 0
+    center: '#ffffff'
   });
   const FIXED = Object.freeze({
     blur: 2,
@@ -2007,12 +2096,19 @@
     maxMR: '1920x1080'
   });
   const DECK_FADE_DURATION = 220;
-  const STRUCTURE_VEIL_HOLD_MS = 950;
+  // Hold after resizeEnd before the veil starts leaving. Together with the
+  // 250ms exit fade this keeps the resizeEnd-to-gone time near 0.7s, roughly
+  // half of the earlier 950ms + 500ms budget.
+  const STRUCTURE_VEIL_HOLD_MS = 475;
   const DECK_WHEEL_THRESHOLD = 36;
   const DECK_WHEEL_LOCK_MS = 850;
+  const DETAIL_WHEEL_THRESHOLD = 40;
+  const DETAIL_WHEEL_LOCK_MS = 900;
+  const DETAIL_WHEEL_IDLE_MS = 190;
   const QUADRANT_SLIDE = 1;
   const RANK_SLIDE = 2;
   const DETAIL_SLIDE = 3;
+  const END_SLIDE = 4;
   const QUADRANT_RING_MIN_SIZE = 34;
   const QUADRANT_RING_MAX_SIZE = 82;
   const QUADRANT_RING_MAX_STROKE = 5.5;
@@ -2037,7 +2133,9 @@
   let rankPage = null;
   let detailPage = null;
   let rankingData = null;
+  let worksData = null;
   const RANKING_DATA_URL = new URL('data/ranking.json', document.baseURI);
+  const WORKS_DATA_URL = new URL('data/works.json', document.baseURI);
 
   function updateStructureVeil(resizeDetail = null) {
     if (!structureVeil || !structureWidth || !structureHeight) return;
@@ -2100,51 +2198,6 @@
     }, STRUCTURE_VEIL_HOLD_MS);
   }
 
-  function clampNumber(value, min, max, fallback) {
-    const number = Number(value);
-    return Number.isFinite(number)
-      ? Math.min(max, Math.max(min, number))
-      : fallback;
-  }
-
-  function loadTuning() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(TUNE_KEY) || 'null');
-      if (!saved || typeof saved !== 'object') return { ...TUNE_DEFAULTS };
-
-      return {
-        particle: typeof saved.particle === 'string' && /^#[0-9a-f]{6}$/i.test(saved.particle)
-          ? saved.particle
-          : TUNE_DEFAULTS.particle,
-        center: typeof saved.center === 'string' && /^#[0-9a-f]{6}$/i.test(saved.center)
-          ? saved.center
-          : TUNE_DEFAULTS.center,
-        coverBar: Math.round(clampNumber(saved.coverBar, 0, 8, TUNE_DEFAULTS.coverBar)),
-        coverArtY: Math.round(clampNumber(saved.coverArtY, -160, 80, TUNE_DEFAULTS.coverArtY))
-      };
-    } catch {
-      return { ...TUNE_DEFAULTS };
-    }
-  }
-
-  let tuning = loadTuning();
-  let tuneSaveTimer = 0;
-
-  function saveTuning() {
-    clearTimeout(tuneSaveTimer);
-    tuneSaveTimer = setTimeout(() => {
-      try { localStorage.setItem(TUNE_KEY, JSON.stringify(tuning)); } catch {}
-    }, 120);
-  }
-
-  function setTuneStatus(text) {
-    tuneStatus.textContent = text || '';
-    clearTimeout(setTuneStatus.timer);
-    if (text) setTuneStatus.timer = setTimeout(() => {
-      tuneStatus.textContent = '';
-    }, 1800);
-  }
-
   function reducedMotion() {
     return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
   }
@@ -2161,6 +2214,8 @@
       art.dataset.ruleMode = 'rank';
     } else if (index === DETAIL_SLIDE) {
       art.dataset.ruleMode = 'detail';
+    } else if (index === END_SLIDE) {
+      art.dataset.ruleMode = 'end';
     } else {
       art.dataset.ruleMode = 'cross';
     }
@@ -2184,6 +2239,7 @@
     const reduce = reducedMotion();
     if (slideIndex === QUADRANT_SLIDE) quadrantPage?.deactivate();
     if (slideIndex === RANK_SLIDE) rankPage?.deactivate();
+    if (slideIndex === DETAIL_SLIDE) detailPage?.deactivate();
     outgoing.setAttribute('aria-hidden', 'true');
 
     fadeOut(outgoing, {
@@ -2196,6 +2252,7 @@
         incoming.setAttribute('aria-hidden', 'false');
         slideIndex = index;
         quadrantPage?.sync();
+        if (index === DETAIL_SLIDE) detailPage?.activate();
         syncDeckControls();
         return fadeIn(incoming, {
           duration: DECK_FADE_DURATION,
@@ -2231,10 +2288,19 @@
     return inside ? rankPage.board : null;
   }
 
+  function detailAreaAtPointer(event) {
+    if (slideIndex !== DETAIL_SLIDE || !detailPage) return false;
+    const rect = art.getBoundingClientRect();
+    return event.clientX >= rect.left &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom;
+  }
+
   function onDeckWheel(event) {
     if (event.defaultPrevented) return;
     if (event.target instanceof Element &&
-        event.target.closest('.tuner, .rank-board')) {
+        event.target.closest('.rank-board')) {
       return;
     }
     const unit = event.deltaMode === 1
@@ -2249,6 +2315,14 @@
     if (rankBoard) {
       rankBoard.scrollTop += delta;
       event.preventDefault();
+      return;
+    }
+
+    if (detailAreaAtPointer(event)) {
+      event.preventDefault();
+      if (!event.ctrlKey && !event.metaKey) {
+        detailPage.handleWheel(delta);
+      }
       return;
     }
 
@@ -2366,7 +2440,7 @@
     parallax = createParallax(art, {
       maxShiftPx,
       smoothing: PARALLAX_SMOOTHING,
-      selector: '#deck .slide-cover [data-parallax], #deck .slide-quadrants [data-parallax], #deck .slide-rank [data-parallax]'
+      selector: '#deck .slide-cover [data-parallax], #deck .slide-quadrants [data-parallax], #deck .slide-rank [data-parallax], #deck .slide-detail [data-parallax], #deck .slide-end [data-parallax]'
     });
 
     function setHover(next) {
@@ -2517,7 +2591,7 @@
       state.pointerType = event.pointerType || 'mouse';
       const target = event.target;
       const overChrome = target instanceof Element &&
-        !!target.closest('.tuner, .deck-controls, .boot');
+        !!target.closest('.deck-controls, .boot');
       const rect = art.getBoundingClientRect();
       const inside = !overChrome &&
         rect.width > 0 &&
@@ -2708,6 +2782,39 @@
     }
   }
 
+  // Per-work media lives beside ranking.json, keyed by teamId. Missing links
+  // and a missing video are first-class states, not errors.
+  async function loadWorksData() {
+    try {
+      const response = await fetch(WORKS_DATA_URL, { cache: 'no-cache' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!data || !Array.isArray(data.works)) {
+        throw new Error('works JSON has no works array');
+      }
+      const works = new Map();
+      for (const work of data.works) {
+        const teamId = Number(work?.teamId);
+        if (!Number.isFinite(teamId)) continue;
+        works.set(teamId, {
+          description: typeof work.description === 'string' ? work.description : '',
+          videoSrc: typeof work.video?.src === 'string' && work.video.src
+            ? work.video.src
+            : '',
+          links: {
+            download: typeof work.links?.download === 'string' ? work.links.download : '',
+            play: typeof work.links?.play === 'string' ? work.links.play : '',
+            project: typeof work.links?.project === 'string' ? work.links.project : ''
+          }
+        });
+      }
+      return works;
+    } catch (error) {
+      console.error('works data load failed', error);
+      return null;
+    }
+  }
+
   function rankScoreText(value) {
     const number = Number(value);
     return Number.isFinite(number) ? number.toFixed(2) : '—';
@@ -2815,6 +2922,15 @@
 
     list.replaceChildren(fragment);
     if (status) status.hidden = true;
+  }
+
+  async function prepareCoverImage() {
+    if (!coverImage) return;
+    try {
+      await coverImage.decode();
+    } catch (error) {
+      console.error('cover image load failed', error);
+    }
   }
 
   async function prepareRankPage() {
@@ -2980,7 +3096,7 @@
       if (event.ctrlKey || event.metaKey || event.defaultPrevented) return;
       if (slideIndex !== RANK_SLIDE) return;
       if (event.target instanceof Element &&
-          event.target.closest('.tuner, .deck-controls, .boot')) {
+          event.target.closest('.deck-controls, .boot')) {
         return;
       }
       const target = rankBoardAtPointer(event);
@@ -3028,325 +3144,701 @@
     const nodes = {
       team: document.getElementById('detailTeam'),
       work: document.getElementById('detailWork'),
-      videoCount: document.getElementById('detailVideoCount'),
-      sideCount: document.getElementById('detailSideCount'),
-      index: document.getElementById('detailIndex'),
-      award: document.getElementById('detailAward'),
-      awardMeta: document.getElementById('detailAwardMeta'),
-      awardGroup: root.querySelector('.detail-award'),
-      awardRank: document.getElementById('detailAwardRank'),
-      footerAward: document.getElementById('detailFooterAward'),
+      pager: document.getElementById('detailPager'),
       prev: document.getElementById('detailPrev'),
-      next: document.getElementById('detailNext')
+      next: document.getElementById('detailNext'),
+      actions: document.getElementById('detailActions'),
+      videoFrame: document.getElementById('detailVideoFrame'),
+      videoStage: document.getElementById('detailVideoStage'),
+      videoDeck: document.getElementById('detailVideoDeck'),
+      veil: document.getElementById('detailVideoVeil'),
+      veilKicker: document.getElementById('detailVideoVeilKicker'),
+      veilName: document.getElementById('detailVideoVeilName'),
+      veilBar: document.getElementById('detailVideoVeilBar'),
+      veilMeta: document.getElementById('detailVideoVeilMeta'),
+      stall: document.getElementById('detailVideoStall'),
+      tools: document.getElementById('detailTools'),
+      volume: document.getElementById('detailVolume'),
+      volumeValue: document.getElementById('detailVolumeValue')
     };
     if (Object.values(nodes).some((node) => !node)) return null;
 
+    const VIDEO_RATIO = 988 / 586;
+    const VIDEO_SHORT_MS = 300;
+    const VIDEO_ENTER_MS = 560;
+    const VIDEO_EXIT_MS = 520;
+    const VIDEO_POOL_LIMIT = 3;
+
+    // Keep the stage exactly on the contained clip so the four corner marks
+    // always sit on the video's real corners, whatever the panel ratio is.
+    function fitVideoStage() {
+      const frame = nodes.videoFrame;
+      const style = getComputedStyle(frame);
+      const insetX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const insetY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      const availableWidth = frame.clientWidth - insetX;
+      const availableHeight = frame.clientHeight - insetY;
+      if (availableWidth <= 0 || availableHeight <= 0) return;
+      const active = video.active?.el;
+      const ratio = active && active.videoWidth && active.videoHeight
+        ? active.videoWidth / active.videoHeight
+        : VIDEO_RATIO;
+      let width = availableWidth;
+      let height = width / ratio;
+      if (height > availableHeight) {
+        height = availableHeight;
+        width = height * ratio;
+      }
+      nodes.videoStage.style.width = `${width.toFixed(2)}px`;
+      nodes.videoStage.style.height = `${height.toFixed(2)}px`;
+    }
+
+    const main = root.querySelector('.detail-main');
+    const introMeta = root.querySelector('.detail-intro-meta');
+    const introBody = root.querySelector('.detail-intro-body');
+    const actionButtons = new Map(
+      [...root.querySelectorAll('.detail-action')]
+        .map((button) => [button.dataset.link, button])
+    );
+    const DEFAULT_BODY = introBody.textContent.trim();
     const teams = Array.isArray(rankingData?.teams) ? rankingData.teams : [];
-    const awardTitles = new Map(
-      (Array.isArray(rankingData?.awards) ? rankingData.awards : [])
-        .map((award) => [award.id, award.title])
-    );
-    const criterionLabels = new Map(
-      (Array.isArray(rankingData?.scoring?.criteria) ? rankingData.scoring.criteria : [])
-        .map((criterion) => [criterion.id, criterion.label])
-    );
+    const pagerDashes = teams.map((team, index) => {
+      const dash = document.createElement('button');
+      dash.type = 'button';
+      dash.className = 'detail-pager-dash';
+      dash.dataset.index = String(index);
+      dash.setAttribute(
+        'aria-label',
+        `第 ${index + 1} 件作品：${team.workTitle || '未命名作品'}`
+      );
+      dash.addEventListener('click', () => selectWork(index));
+      nodes.pager.append(dash);
+      return dash;
+    });
     let activeIndex = 0;
+
+    const wheel = {
+      accum: 0,
+      lastAt: 0,
+      lockedUntil: 0
+    };
 
     function padded(value) {
       return String(value).padStart(2, '0');
     }
 
-    function apply(team) {
+    function setActions(open) {
+      const pinned = Boolean(open);
+      main.classList.toggle('is-actions-pinned', pinned);
+      if (pinned) main.classList.remove('is-actions-dismissed');
+      nodes.videoFrame.setAttribute('aria-expanded', String(pinned));
+    }
+
+    function dismissActions() {
+      setActions(false);
+      main.classList.add('is-actions-dismissed');
+    }
+
+    function animateSwap(direction) {
+      if (reducedMotion()) return;
+      const offset = direction > 0 ? 16 : -16;
+      const targets = [nodes.work, introBody, introMeta].filter(Boolean);
+      targets.forEach((target, index) => {
+        target.animate([
+          { opacity: 0, transform: `translateY(${offset}px)` },
+          { opacity: 1, transform: 'translateY(0)' }
+        ], {
+          duration: 560,
+          delay: index * 80,
+          easing: 'cubic-bezier(.22,.72,.24,1)',
+          fill: 'backwards'
+        });
+      });
+    }
+
+    /* ------------------------------------------------------------------
+       Clip loading: one <video> per work, stacked inside the clipped window.
+       Switching never touches the outgoing element, so a load that has
+       already started keeps running (it can still finish while hidden).
+       ------------------------------------------------------------------ */
+    const video = {
+      slots: new Map(),
+      active: null,
+      pending: null,
+      phase: 'idle',
+      token: 0,
+      veilShown: false,
+      live: false,
+      presented: false,
+      direction: 1,
+      volume: 0.6,
+      log: []
+    };
+    let veilTimer = 0;
+
+    function slotFor(teamId, src) {
+      if (!src) {
+        return { id: teamId, src: '', el: null, phase: 'ready', ratio: 1 };
+      }
+      const existing = video.slots.get(teamId);
+      if (existing && existing.src === src) return existing;
+      if (existing) {
+        existing.el.remove();
+        video.slots.delete(teamId);
+      }
+
+      const el = document.createElement('video');
+      el.className = 'detail-video-slot';
+      el.muted = false;
+      el.loop = true;
+      el.playsInline = true;
+      el.preload = 'auto';
+      el.volume = video.volume;
+      el.setAttribute('aria-hidden', 'true');
+
+      let settle = () => {};
+      const slot = {
+        id: teamId,
+        src,
+        el,
+        phase: 'loading',
+        ratio: null,
+        ready: new Promise((resolve) => {
+          settle = (phase) => {
+            if (slot.phase !== 'loading') return;
+            slot.phase = phase;
+            resolve(slot);
+          };
+        })
+      };
+
+      el.addEventListener('canplay', () => settle('ready'));
+      el.addEventListener('error', () => settle('error'));
+      el.addEventListener('waiting', () => {
+        if (slot === video.active && video.live) setStall(true);
+      });
+      el.addEventListener('stalled', () => {
+        if (slot === video.active && video.live) setStall(true);
+      });
+      for (const type of ['playing', 'canplay', 'pause', 'seeked']) {
+        el.addEventListener(type, () => {
+          if (slot === video.active) setStall(false);
+        });
+      }
+      const refresh = () => {
+        const duration = el.duration;
+        if (Number.isFinite(duration) && duration > 0 && el.buffered.length) {
+          slot.ratio = Math.min(
+            1,
+            el.buffered.end(el.buffered.length - 1) / duration
+          );
+        }
+        if (video.pending === slot) updateVeilProgress(slot);
+      };
+      el.addEventListener('progress', refresh);
+      el.addEventListener('loadeddata', refresh);
+      el.addEventListener('durationchange', refresh);
+
+      el.src = src;
+      nodes.videoDeck.append(el);
+      video.slots.set(teamId, slot);
+      return slot;
+    }
+
+    function updateVeilProgress(slot) {
+      if (!slot) return;
+      nodes.veil.classList.toggle('is-error', slot.phase === 'error');
+      nodes.veil.classList.toggle('is-ready', slot.phase === 'ready');
+      if (slot.phase === 'error') {
+        nodes.veil.classList.remove('is-indeterminate');
+        nodes.veilBar.style.width = '100%';
+        nodes.veilKicker.textContent = 'Clip unavailable';
+        nodes.veilMeta.textContent = '加载失败';
+        return;
+      }
+      nodes.veilKicker.textContent = slot.phase === 'ready' ? 'Ready' : 'Loading';
+      if (!Number.isFinite(slot.ratio)) {
+        nodes.veil.classList.add('is-indeterminate');
+        nodes.veilMeta.textContent = '缓冲中';
+        return;
+      }
+      nodes.veil.classList.remove('is-indeterminate');
+      const percent = Math.round(Math.max(0, Math.min(1, slot.ratio)) * 100);
+      nodes.veilBar.style.width = `${percent}%`;
+      nodes.veilMeta.textContent = `${percent}%`;
+    }
+
+    // The stall sheet is a playback-only layer: it lives under the veil and is
+    // never shown while a switch is presenting the loading veil.
+    let stallWanted = false;
+
+    function applyStall() {
+      const show = stallWanted &&
+        video.live &&
+        !video.veilShown &&
+        video.phase === 'ready' &&
+        Boolean(video.active);
+      nodes.stall.hidden = !show;
+    }
+
+    function setStall(visible) {
+      stallWanted = Boolean(visible);
+      applyStall();
+    }
+
+    function setVeilCopy(team, slot) {
+      nodes.veilName.textContent = team?.workTitle || '未命名作品';
+      updateVeilProgress(slot);
+    }
+
+    function veilSettle(duration) {
+      return new Promise((resolve) => {
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          clearTimeout(veilTimer);
+          nodes.veil.removeEventListener('transitionend', onEnd);
+          resolve();
+        };
+        const onEnd = (event) => {
+          if (event.target !== nodes.veil) return;
+          if (event.propertyName !== 'translate') return;
+          finish();
+        };
+        nodes.veil.addEventListener('transitionend', onEnd);
+        veilTimer = setTimeout(finish, duration + 90);
+      });
+    }
+
+    async function veilTo(y, duration) {
+      nodes.veil.style.setProperty('--veil-duration', `${duration}ms`);
+      nodes.veil.style.setProperty('--veil-y', y);
+      if (duration <= 0) return;
+      await veilSettle(duration);
+    }
+
+    // Forward switches wipe upward (enter from below), backward switches wipe
+    // downward (enter from above), so the gesture direction reads in the veil.
+    function veilEntrySide() {
+      return video.direction >= 0 ? '101%' : '-101%';
+    }
+
+    function veilExitSide() {
+      return video.direction >= 0 ? '-101%' : '101%';
+    }
+
+    async function showVeil(team, slot, duration) {
+      video.veilShown = true;
+      // The loading veil owns the panel while it is up; the playback stall
+      // sheet must never sit on top of it.
+      stallWanted = false;
+      applyStall();
+      nodes.veil.classList.remove('is-instant', 'is-error', 'is-indeterminate');
+      nodes.veilBar.style.width = '0%';
+      nodes.veil.setAttribute('aria-hidden', 'false');
+      setVeilCopy(team, slot);
+      // Park the veil on the correct side before transitioning in.
+      nodes.veil.classList.add('is-instant');
+      nodes.veil.style.setProperty('--veil-y', veilEntrySide());
+      void nodes.veil.offsetWidth;
+      nodes.veil.classList.remove('is-instant');
+      await veilTo('0%', duration);
+    }
+
+    async function hideVeil(duration) {
+      await veilTo(veilExitSide(), duration);
+      video.veilShown = false;
+      nodes.veil.classList.add('is-instant');
+      nodes.veil.setAttribute('aria-hidden', 'true');
+      nodes.veil.style.setProperty('--veil-y', veilEntrySide());
+      nodes.veilBar.style.width = '0%';
+      nodes.veil.classList.remove('is-indeterminate', 'is-error');
+      void nodes.veil.offsetWidth;
+      nodes.veil.classList.remove('is-instant');
+    }
+
+    // The clip is a live composited layer, so it must be hidden by its own
+    // class, not only by the slide's visibility. Only a live slide may show it.
+    function syncSlotVisibility() {
+      for (const slot of video.slots.values()) {
+        const on = video.live && slot === video.active;
+        slot.el.classList.toggle('is-active', on);
+        if (!on) slot.el.pause?.();
+      }
+      if (!video.live) setStall(false);
+    }
+
+    function activateSlot(slot) {
+      video.active = slot;
+      syncSlotVisibility();
+      fitVideoStage();
+    }
+
+    function clearSlots() {
+      video.active = null;
+      syncSlotVisibility();
+      fitVideoStage();
+    }
+
+    function playActive() {
+      const el = video.active?.el;
+      if (!el) return;
+      if (!video.live || slideIndex !== DETAIL_SLIDE || reducedMotion()) {
+        el.pause?.();
+        return;
+      }
+      // Sound is on by default. If the browser refuses an unmuted autoplay
+      // (no user gesture yet), fall back to muted playback instead of stalling.
+      el.muted = false;
+      const attempt = el.play?.();
+      attempt?.catch?.((error) => {
+        if (error?.name !== 'NotAllowedError') return;
+        el.muted = true;
+        el.play?.().catch(() => {});
+      });
+    }
+
+    function evictSlots() {
+      const keep = new Set();
+      if (video.active) keep.add(video.active);
+      for (const slot of video.slots.values()) {
+        if (keep.size >= VIDEO_POOL_LIMIT) break;
+        if (slot.phase === 'ready') keep.add(slot);
+      }
+      for (const [id, slot] of [...video.slots.entries()]) {
+        if (slot.phase === 'loading' || keep.has(slot)) continue;
+        slot.el.remove();
+        video.slots.delete(id);
+      }
+    }
+
+    function setPhase(phase) {
+      video.phase = phase;
+      video.log.push(phase);
+      if (video.log.length > 24) video.log.shift();
+      nodes.videoFrame.dataset.videoPhase = phase;
+      applyStall();
+    }
+
+    async function presentVideo(team, work, options = {}) {
+      const teamId = Number(team?.teamId);
+      const src = work?.videoSrc || '';
+      const slot = slotFor(teamId, src);
+      const warm = slot.phase === 'ready';
+      const token = ++video.token;
+      const silent = options.silent === true;
+      if (options.direction) video.direction = options.direction > 0 ? 1 : -1;
+
+      video.pending = slot;
+      nodes.videoFrame.classList.toggle('has-video', Boolean(src));
+      nodes.videoFrame.classList.toggle('is-video-empty', !src);
+      nodes.videoFrame.setAttribute(
+        'aria-label',
+        src ? '作品视频，点击显示操作' : '暂无作品视频，点击显示操作'
+      );
+
+      if (silent) {
+        setPhase('loading');
+        if (src) await slot.ready;
+        if (token !== video.token) return;
+        if (src) activateSlot(slot);
+        else clearSlots();
+        setPhase('ready');
+        video.pending = null;
+        playActive();
+        return;
+      }
+
+      const enterMs = warm ? VIDEO_SHORT_MS : VIDEO_ENTER_MS;
+      const exitMs = warm ? VIDEO_SHORT_MS : VIDEO_EXIT_MS;
+
+      if (video.phase !== 'loading' || !video.veilShown) {
+        setPhase('entering');
+        await showVeil(team, slot, enterMs);
+        if (token !== video.token) return;
+        setPhase('loading');
+      } else {
+        setVeilCopy(team, slot);
+      }
+
+      if (!warm) {
+        await slot.ready;
+        if (token !== video.token) return;
+      }
+
+      // A failed clip keeps the veil in place: the panel never uncovers a
+      // clip that cannot play.
+      if (slot.phase === 'error') {
+        updateVeilProgress(slot);
+        setPhase('loading');
+        return;
+      }
+
+      updateVeilProgress(slot);
+
+      // Swap the visible clip while the opaque veil still covers the panel,
+      // then let the veil leave to reveal the new clip.
+      if (src) activateSlot(slot);
+      else clearSlots();
+      playActive();
+      setPhase('exiting');
+      await hideVeil(exitMs);
+      if (token !== video.token) return;
+
+      setPhase('ready');
+      video.pending = null;
+      evictSlots();
+    }
+
+    function videoLocked() {
+      return video.phase === 'entering' || video.phase === 'exiting';
+    }
+
+    function applyVolume(value) {
+      const percent = Math.max(0, Math.min(100, Number(value) || 0));
+      video.volume = percent / 100;
+      nodes.volumeValue.textContent = String(Math.round(percent));
+      nodes.volume.setAttribute('aria-valuetext', `${Math.round(percent)}%`);
+      for (const slot of video.slots.values()) slot.el.volume = video.volume;
+    }
+
+    nodes.volume.addEventListener('input', () => {
+      applyVolume(nodes.volume.value);
+    });
+    applyVolume(nodes.volume.value);
+
+    function applyWorkLinks(links) {
+      for (const [key, button] of actionButtons) {
+        const href = links?.[key] || '';
+        button.dataset.href = href;
+        button.disabled = !href;
+        button.setAttribute('aria-disabled', String(!href));
+      }
+    }
+
+    function apply(team, options = {}) {
       if (!team) return;
       const workTitle = team.workTitle || '未提供作品名';
       const teamName = team.teamName || '未知队伍';
-      const awardId = Array.isArray(team.awards) ? team.awards[0] : null;
-      const hasAward = Boolean(awardId);
-      const awardTitle = hasAward
-        ? (awardTitles.get(awardId) || awardId)
-        : '入围作品';
-      const awardScore = hasAward
-        ? team.scores?.[awardId]
-        : team.overallScore;
-      const awardLabel = hasAward
-        ? (criterionLabels.get(awardId) || awardTitle)
-        : '综合评分';
-      const podium = Number.isInteger(team.rank) && team.rank <= 3;
-      const rank = Number.isInteger(team.rank) ? padded(team.rank) : '—';
+      const work = worksData?.get(Number(team.teamId)) ?? null;
 
       nodes.team.textContent = teamName;
       nodes.work.textContent = workTitle;
-      nodes.videoCount.textContent = `${padded(activeIndex + 1)} / ${padded(teams.length)}`;
-      nodes.sideCount.textContent = padded(activeIndex + 1);
-      nodes.index.textContent = padded(activeIndex + 1);
-      nodes.index.classList.toggle('is-podium', podium);
-      nodes.award.textContent = awardTitle;
-      nodes.award.classList.toggle('is-award', hasAward);
-      nodes.awardGroup.classList.toggle('is-award', hasAward);
-      nodes.awardGroup.classList.toggle('is-podium', podium);
-      nodes.awardMeta.textContent = `${awardLabel} / ${rankScoreText(awardScore)}`;
-      nodes.awardRank.textContent = rank;
-      nodes.footerAward.textContent = awardTitle;
+      introBody.textContent = work?.description || DEFAULT_BODY;
+      applyWorkLinks(work?.links);
+      pagerDashes.forEach((dash, index) => {
+        const current = index === activeIndex;
+        dash.classList.toggle('is-current', current);
+        if (current) dash.setAttribute('aria-current', 'true');
+        else dash.removeAttribute('aria-current');
+      });
       root.dataset.teamId = String(team.teamId ?? '');
       root.setAttribute('aria-label', `作品详情：${workTitle}`);
+
+      // Entry no longer preloads anything: the first clip is requested only
+      // when the detail slide actually becomes active.
+      if (options.deferVideo) {
+        video.presented = false;
+        return;
+      }
+      presentVideo(team, work, options).catch((error) => {
+        console.error('work clip presentation failed', error);
+      });
     }
 
     function step(delta) {
       if (teams.length < 2) return;
-      activeIndex = (activeIndex + delta + teams.length) % teams.length;
-      apply(teams[activeIndex]);
+      if (videoLocked()) return;
+      const next = activeIndex + delta;
+      // The work list is not a loop: the gesture that runs past either end is
+      // handed to the deck, which decides whether a page exists in that
+      // direction (it does not wrap, so the last work simply stops there).
+      if (next < 0 || next >= teams.length) {
+        setActions(false);
+        goToSlide(slideIndex + delta);
+        return;
+      }
+      setActions(false);
+      video.direction = delta > 0 ? 1 : -1;
+      activeIndex = next;
+      apply(teams[activeIndex], { direction: video.direction });
+      animateSwap(delta);
+    }
+
+    // Jump straight to one work (pager taps, deep links, diagnostics).
+    function selectWork(index) {
+      const target = Number(index);
+      if (!Number.isInteger(target) ||
+          target < 0 ||
+          target >= teams.length ||
+          target === activeIndex ||
+          videoLocked()) {
+        return false;
+      }
+      setActions(false);
+      video.direction = target > activeIndex ? 1 : -1;
+      activeIndex = target;
+      apply(teams[activeIndex], { direction: video.direction });
+      animateSwap(video.direction);
+      return true;
+    }
+
+    function handleWheel(delta) {
+      if (!delta || deckLocked || teams.length < 2) return;
+      if (videoLocked()) {
+        wheel.accum = 0;
+        wheel.lastAt = 0;
+        return;
+      }
+      const now = performance.now();
+      if (now < wheel.lockedUntil) return;
+      if (now - wheel.lastAt > DETAIL_WHEEL_IDLE_MS) wheel.accum = 0;
+      wheel.lastAt = now;
+      wheel.accum += delta;
+      if (Math.abs(wheel.accum) < DETAIL_WHEEL_THRESHOLD) return;
+
+      const direction = wheel.accum > 0 ? 1 : -1;
+      wheel.accum = 0;
+      wheel.lockedUntil = now + DETAIL_WHEEL_LOCK_MS;
+      step(direction);
+    }
+
+    function activate() {
+      video.live = true;
+      fitVideoStage();
+      if (!video.presented) {
+        video.presented = true;
+        const team = teams[activeIndex];
+        const work = worksData?.get(Number(team?.teamId)) ?? null;
+        presentVideo(team, work).catch((error) => {
+          console.error('work clip presentation failed', error);
+        });
+        return;
+      }
+      syncSlotVisibility();
+      playActive();
+    }
+
+    function deactivate() {
+      setActions(false);
+      video.live = false;
+      syncSlotVisibility();
+      wheel.accum = 0;
+      wheel.lastAt = 0;
+      wheel.lockedUntil = 0;
+    }
+
+    function toggleActions() {
+      if (main.classList.contains('is-actions-pinned')) {
+        dismissActions();
+      } else {
+        setActions(true);
+      }
     }
 
     nodes.prev.addEventListener('click', () => step(-1));
     nodes.next.addEventListener('click', () => step(1));
+    // The video itself is the trigger: hover reveals the tray on a mouse, a
+    // click pins it for touch, and Enter/Space pins it from the keyboard.
+    nodes.videoFrame.addEventListener('click', toggleActions);
+    nodes.videoFrame.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      toggleActions();
+    });
+    root.addEventListener('pointerdown', (event) => {
+      if (!main.classList.contains('is-actions-pinned')) return;
+      if (event.target instanceof Element &&
+          event.target.closest('.detail-tools, .detail-video')) {
+        return;
+      }
+      dismissActions();
+    });
+    root.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' ||
+          !main.classList.contains('is-actions-pinned')) {
+        return;
+      }
+      event.preventDefault();
+      dismissActions();
+      nodes.videoFrame.focus();
+    });
+    main.addEventListener('pointerleave', () => {
+      main.classList.remove('is-actions-dismissed');
+    });
+    for (const button of actionButtons.values()) {
+      button.addEventListener('click', () => {
+        const href = button.dataset.href;
+        if (!href) return;
+        window.open(href, '_blank', 'noopener,noreferrer');
+      });
+    }
+
     const canSwitch = teams.length > 1;
     nodes.prev.disabled = !canSwitch;
     nodes.next.disabled = !canSwitch;
-    if (teams.length) apply(teams[activeIndex]);
+    if (teams.length) apply(teams[activeIndex], { deferVideo: true });
+
+    fitVideoStage();
+    if (typeof ResizeObserver === 'function') {
+      new ResizeObserver(fitVideoStage).observe(nodes.videoFrame);
+    } else {
+      window.addEventListener('resize', fitVideoStage);
+    }
 
     return {
-      getState: () => ({
-        index: activeIndex,
-        count: teams.length,
-        teamId: teams[activeIndex]?.teamId ?? null,
-        workTitle: teams[activeIndex]?.workTitle ?? null
-      }),
+      getState: () => {
+        const team = teams[activeIndex];
+        const work = worksData?.get(Number(team?.teamId)) ?? null;
+        return {
+          index: activeIndex,
+          count: teams.length,
+          teamId: team?.teamId ?? null,
+          workTitle: team?.workTitle ?? null,
+          hasVideo: Boolean(work?.videoSrc),
+          links: { ...(work?.links ?? {}) },
+          actionsPinned: main.classList.contains('is-actions-pinned'),
+          video: {
+            phase: video.phase,
+            locked: videoLocked(),
+            veilShown: video.veilShown,
+            pendingId: video.pending?.id ?? null,
+            activeId: video.active?.id ?? null,
+            ratio: video.pending?.ratio ?? video.active?.ratio ?? null,
+            pool: [...video.slots.keys()],
+            activePaused: video.active?.el ? video.active.el.paused : null,
+            log: [...video.log]
+          }
+        };
+      },
       next: () => step(1),
-      previous: () => step(-1)
+      previous: () => step(-1),
+      select: selectWork,
+      handleWheel,
+      activate,
+      deactivate
     };
   }
 
   const rankingDataPromise = loadRankingData();
+  const worksDataPromise = loadWorksData();
 
-  function applySurface() {
-    const center = tuning.center;
-    if (field) {
-      field.setPalette({
-        center,
-        particle: tuning.particle
-      });
-    }
-    // The solid surface and the mirror root share the centre colour.
-    art.style.background = center;
-    if (mirror?.root) mirror.root.style.background = center;
-  }
-
-  function applyCoverLayout() {
-    document.documentElement.style.setProperty('--cover-bar-height', `${tuning.coverBar}px`);
-    document.documentElement.style.setProperty('--cover-bottom-gap', `${COVER_FIXED.gap}px`);
-    document.documentElement.style.setProperty('--cover-text-y', `${COVER_FIXED.textY}px`);
-    document.documentElement.style.setProperty('--cover-art-y', `${tuning.coverArtY}px`);
-    tuneCoverBarValue.textContent = `${tuning.coverBar}px`;
-    tuneCoverGapFixed.textContent = `${COVER_FIXED.gap}px`;
-    tuneCoverTextYFixed.textContent = `${COVER_FIXED.textY}px`;
-    tuneCoverArtYValue.textContent = `${tuning.coverArtY}px`;
-  }
-
-  let coverRefreshFrame = 0;
-
-  function refreshCoverMirror() {
-    if (!mirror || coverRefreshFrame) return;
-    coverRefreshFrame = requestAnimationFrame(() => {
-      coverRefreshFrame = 0;
-      mirror?.refresh();
-    });
-  }
-
-  function syncTuningInputs() {
-    tuneParticle.value = tuning.particle;
-    tuneCenter.value = tuning.center;
-    tuneCoverBar.value = String(tuning.coverBar);
-    tuneCoverArtY.value = String(tuning.coverArtY);
-    tuneFeatherFixed.textContent = String(FIXED.feather);
-  }
-
-  function updateTuneReadout() {
-    if (!mirror) {
-      tuneMode.textContent = '—';
-      tuneReadout.textContent = 'waiting for backend…';
+  async function prepareWorksData() {
+    const works = await worksDataPromise;
+    if (!works) {
+      console.error('works data unavailable; detail page keeps its fallbacks');
       return;
     }
-    const state = mirror.getState();
-    const layout = state.layout;
-    const device = layout?.device;
-    const detail = state.renderDetail;
-    tuneMode.textContent = state.mode.toUpperCase();
-    const lines = [
-      `dpr ${state.dpr.toFixed(2)} · ${state.mode.toUpperCase()}`,
-      layout
-        ? `content ${layout.aw.toFixed(2)} × ${layout.ah.toFixed(2)} css`
-        : 'content —',
-      device
-        ? `device ${device.aw} × ${device.ah} px`
-        : 'device —'
-    ];
-    if (detail) {
-      lines.push(`canvas ${detail.outputWidth} × ${detail.outputHeight}`);
-      lines.push(`mirror ${detail.width} × ${detail.height}`);
-    } else if (state.map) {
-      lines.push(`map ${state.map.mirror || '—'}`);
-    }
-    tuneReadout.textContent = lines.join('\n');
+    worksData = works;
   }
 
-  function applyFixedBackendOptions() {
-    if (!mirror) return;
-    if (mirror.mode === 'svg') {
-      mirror.setSvgOptions({
-        mapScale: FIXED.mapScale,
-        maxMR: FIXED.maxMR
-      });
-    } else {
-      mirror.setWebglOptions({
-        renderScale: FIXED.renderScale,
-        contentScale: FIXED.contentScale
-      });
-    }
+  // The solid surface and the mirror root share the fixed centre colour.
+  function applySurface() {
+    if (field) field.setPalette({ center: SURFACE.center, particle: SURFACE.particle });
+    art.style.background = SURFACE.center;
+    if (mirror?.root) mirror.root.style.background = SURFACE.center;
   }
-
-  function applyMirrorTuning() {
-    if (!mirror) return;
-    try {
-      mirror.setFilter({ blur: FIXED.blur, feather: FIXED.feather });
-      applyFixedBackendOptions();
-    } catch (error) {
-      setTuneStatus(error.message);
-    }
-    syncTuningInputs();
-    updateTuneReadout();
-  }
-
-  function configSnapshot() {
-    return JSON.stringify({
-      ...FIXED,
-      ...tuning,
-      particles: {
-        sizePx: [PARTICLE_DEFAULTS.minSizePx, PARTICLE_DEFAULTS.maxSizePx],
-        speedPxPerSec: [
-          PARTICLE_DEFAULTS.minSpeedPxPerSec,
-          PARTICLE_DEFAULTS.maxSpeedPxPerSec
-        ],
-        densityAreaPx: PARTICLE_DEFAULTS.densityAreaPx,
-        count: field?.getState().count ?? null,
-        dprCap: PARTICLE_DEFAULTS.dprCap
-      },
-      deck: {
-        count: slides.length,
-        index: slideIndex,
-        fadeDuration: DECK_FADE_DURATION,
-        fadeMode: 'staggered',
-        fadeItems: slides.reduce(
-          (total, slide) => total + slide.querySelectorAll('[data-fade]').length,
-          0
-        )
-      },
-      cover: {
-        barHeight: tuning.coverBar,
-        bottomGap: COVER_FIXED.gap,
-        textY: COVER_FIXED.textY,
-        imageY: tuning.coverArtY
-      },
-      parallax: parallax
-        ? (() => {
-          const state = parallax.getState();
-          return {
-            maxShiftPx: state.maxShiftPx,
-            smoothing: state.smoothing,
-            layers: state.layers.map((layer) => ({
-              depth: layer.depth,
-              shiftPx: layer.shiftPx
-            }))
-          };
-        })()
-        : null,
-      quadrants: {
-        index: QUADRANT_SLIDE,
-        hover: quadrantPage?.getState().hover ?? null,
-        tintPanels: ['red', 'green', 'blue', 'gray'],
-        tintColors: Object.fromEntries(
-          [...document.querySelectorAll('.quadrant-filter-defs feFlood')].map(
-            (flood) => [
-              flood.parentElement.id.replace('quad-tint-', ''),
-              flood.getAttribute('flood-color')
-            ]
-          )
-        ),
-        pointer: {
-          nativeCursor: true,
-          sizePx: [QUADRANT_RING_MIN_SIZE, QUADRANT_RING_MAX_SIZE],
-          strokePx: [QUADRANT_RING_MAX_STROKE, QUADRANT_RING_MIN_STROKE],
-          speedCapPxPerSec: QUADRANT_RING_SPEED_CAP,
-          speedSmoothing: QUADRANT_RING_SPEED_SMOOTHING,
-          speedDecay: QUADRANT_RING_SPEED_DECAY
-        }
-      },
-      contentSize: { width: '72%', height: '72%' }
-    }, null, 2);
-  }
-
-  tuneParticle.addEventListener('input', () => {
-    tuning.particle = tuneParticle.value;
-    applySurface();
-    saveTuning();
-  });
-
-  tuneCenter.addEventListener('input', () => {
-    tuning.center = tuneCenter.value;
-    applySurface();
-    saveTuning();
-  });
-
-  tuneCoverBar.addEventListener('input', () => {
-    tuning.coverBar = Number(tuneCoverBar.value);
-    applyCoverLayout();
-    refreshCoverMirror();
-    saveTuning();
-  });
-
-  tuneCoverArtY.addEventListener('input', () => {
-    tuning.coverArtY = Number(tuneCoverArtY.value);
-    applyCoverLayout();
-    refreshCoverMirror();
-    saveTuning();
-  });
-
-  tuneToggle.addEventListener('click', () => {
-    const open = tuneBody.hidden;
-    tuneBody.hidden = !open;
-    tuner.classList.toggle('is-collapsed', !open);
-    tuneToggle.textContent = open ? '–' : '+';
-    tuneToggle.setAttribute('aria-expanded', String(open));
-  });
-
-  tuneReset.addEventListener('click', () => {
-    tuning = { ...TUNE_DEFAULTS };
-    syncTuningInputs();
-    applyCoverLayout();
-    applySurface();
-    applyMirrorTuning();
-    refreshCoverMirror();
-    saveTuning();
-    setTuneStatus('Defaults restored');
-  });
-
-  tuneCopy.addEventListener('click', async () => {
-    const text = configSnapshot();
-    try {
-      await navigator.clipboard.writeText(text);
-      setTuneStatus('Config copied');
-    } catch {
-      const area = document.createElement('textarea');
-      area.value = text;
-      area.style.position = 'fixed';
-      area.style.opacity = '0';
-      document.body.append(area);
-      area.select();
-      try { document.execCommand('copy'); setTuneStatus('Config copied'); }
-      catch { setTuneStatus('Copy failed'); }
-      area.remove();
-    }
-  });
-
   let mirror = null;
   let field = null;
   let preflight = null;
@@ -3354,15 +3846,7 @@
   let questionCancelValue = 'close';
   let questionFocusTimer = 0;
 
-  syncTuningInputs();
-  applyCoverLayout();
   applySurface();
-  updateTuneReadout();
-
-  tuneBody.hidden = true;
-  tuner.classList.add('is-collapsed');
-  tuneToggle.textContent = '+';
-  tuneToggle.setAttribute('aria-expanded', 'false');
 
   window.__mirrorHome = {
     get mirror() { return mirror; },
@@ -3474,7 +3958,6 @@
     await wait(reduce ? 0 : PREFLIGHT_FADE_MS);
     bootQuestion.hidden = true;
     stage.inert = false;
-    tuner.inert = false;
     resolve(value);
   }
 
@@ -3503,7 +3986,6 @@
     questionCancelValue = cancelValue;
     bootQuestion.hidden = false;
     stage.inert = true;
-    tuner.inert = true;
 
     return new Promise((resolve) => {
       questionResolve = resolve;
@@ -3630,7 +4112,7 @@
       contentSize: { width: '72%', height: '72%' },
       contentFit: 'fill',
       // The solid content surface owns the centre fill.
-      background: tuning.center,
+      background: SURFACE.center,
       filter: { blur: FIXED.blur, feather: FIXED.feather },
       svg: {
         mapScale: FIXED.mapScale,
@@ -3657,13 +4139,10 @@
     }
 
     mirror = instance;
-    instance.on('resize', updateTuneReadout);
     instance.on('resize', () => updateStructureVeil());
     instance.on('resizeStart', showStructureVeil);
     instance.on('resizing', showStructureVeil);
     instance.on('resizeEnd', hideStructureVeilSoon);
-    instance.on('filter', updateTuneReadout);
-    instance.on('render', updateTuneReadout);
 
     if (!field) {
       try {
@@ -3679,7 +4158,6 @@
 
     document.body.dataset.backend = mirror.mode;
     document.body.classList.add('mirror-ready');
-    updateTuneReadout();
     return instance;
   }
 
@@ -3695,7 +4173,6 @@
     boot.classList.remove('is-question');
     boot.classList.add('is-hidden');
     stage.inert = false;
-    tuner.inert = false;
     deckControls.inert = false;
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     await wait(reduce ? 0 : BOOT_HIDE_MS);
@@ -3721,7 +4198,8 @@
 
   async function init() {
     document.body.setAttribute('aria-busy', 'true');
-    await prepareRankPage();
+    await Promise.all([prepareRankPage(), prepareWorksData()]);
+    await prepareCoverImage();
     quadrantPage = initQuadrantPage();
     quadrantPage?.sync();
     rankPage = initRankPage();
