@@ -18,7 +18,7 @@ The directory page SHALL list `MIRROR / 2610` as its only page entry and SHALL N
 - **THEN** the page displays one page card linking to `./mirror-2610/`
 - **AND** the page contains no link or label for the mirror lab
 
-#### Scenario: Lab remains directly addressable
+#### Scenario: Lab stays source-only
 
 - **WHEN** the page is built
 - **THEN** `dist/gamejam/` contains no `mirror-2610/mirror-lab.html`
@@ -119,6 +119,32 @@ After the three bundle loads, the page SHALL run `checkHtmlInCanvasSupport()` an
 - **AND** it shows a failure panel inside the loading layer
 - **AND** the loading layer is removed only after the panel is dismissed instead of leaving it indefinitely
 
+### Requirement: HTML-in-Canvas origin trial
+
+The `mirror-2610` page SHALL carry a Chrome origin trial token for the `HTMLInCanvas` feature in its document head, so stable Chrome visitors can use the WebGL backend without enabling a flag. The token SHALL be a static `<meta http-equiv="origin-trial">` in the page head rather than something injected per backend, because a token applies to the whole document and must be present before any feature detection runs. The source-only diagnostic lab SHALL NOT carry the token.
+
+#### Scenario: Token in the document head
+
+- **WHEN** `mirror-2610/index.html` is inspected
+- **THEN** exactly one `<meta http-equiv="origin-trial">` sits inside `<head>`
+- **AND** its payload names the `HTMLInCanvas` feature, the production origin with the subdomain flag, and an expiry date in the future
+- **AND** the token is not conditioned on the selected backend
+- **AND** `mirror-lab.html` contains no token
+
+#### Scenario: Preflight logic stays unchanged
+
+- **WHEN** the token enables the API for a visitor
+- **THEN** support is still decided by the feature probe in `checkHtmlInCanvasSupport()`
+- **AND** the `157.0.8080.0` version gate still guards the nested-canvas device-pixel bug
+- **AND** a participating Chrome below the gate reaches the existing WebGL/SVG compatibility dialog instead of falling back silently
+- **AND** browsers that ignore origin trials keep the SVG fallback path
+
+#### Scenario: Missing or expired token
+
+- **WHEN** the token is absent, expired, or served from a non-matching origin
+- **THEN** Chrome ignores it without raising a page error
+- **AND** the page keeps booting with whatever the feature probe reports, falling back to SVG when the API is unavailable
+
 ### Requirement: Content sizing
 
 The content region SHALL target 72% of the stage width and 72% of the stage height.
@@ -191,11 +217,41 @@ Both backends SHALL use `blur: 2.00` and `feather: 72`.
 - **WHEN** either backend starts
 - **THEN** its filter feather is `72`
 
+### Requirement: SVG backend engine coverage
+
+The SVG backend SHALL render its reflections through a `backdrop-filter: url(#…)` reference whose primitive chain includes `feImage` (displacement map and feather mask) and `feDisplacementMap`.
+
+That chain SHALL be documented as Chromium-only, and the page SHALL NOT ship an engine-specific reflection fallback in this revision. The page SHALL stay fully usable in affected engines: only the reflected bands are absent.
+
+#### Scenario: Firefox renders everything except the bands
+
+- **WHEN** the page is rendered by Firefox and the SVG backend is active
+- **THEN** the deck, paging, fades, particle field, and quadrant colour filters all render normally
+- **AND** the mirror bands outside the content rectangle stay flat, because Gecko drops the non-GPU-accelerated `feImage` / `feDisplacementMap` primitives (mozilla bug 1896504, duplicate 1972363)
+- **AND** no error, fallback banner, or console error is produced
+
+#### Scenario: Safari renders no url() backdrop filter
+
+- **WHEN** the page is rendered by a WebKit browser
+- **THEN** neither the mirror bands nor the quadrant colour filters render, because `backdrop-filter: url(#…)` is not implemented (webkit bug 245510)
+- **AND** the rest of the deck stays usable
+
+#### Scenario: Chromium renders the bands
+
+- **WHEN** the page is rendered by a Chromium browser with either backend
+- **THEN** the reflected bands render outside the content rectangle
+- **AND** the quadrant colour filters tint their quadrants
+
+#### Scenario: Coverage stays documented
+
+- **WHEN** the browser limitation is reviewed
+- **THEN** the `mirror.js` module docs and the project README both name Gecko and WebKit, the two upstream bug IDs, and the fact that the failure is in the `feImage` primitive rather than in how the map is mounted (data URI, blob URL, or element reference)
+
 ### Requirement: Static build integration
 
 The gamejam page SHALL build through the repository build entry into `dist/gamejam/`.
 
-The build SHALL include the directory page, both `mirror-2610` pages, shared effects, and three runtime assets, and SHALL exclude source-only files.
+The build SHALL include the directory page, the `mirror-2610` homepage, its page assets and data, shared effects, three runtime assets, and the closing wordmark, and SHALL exclude source-only files including the diagnostic lab.
 
 #### Scenario: Clean build
 
@@ -221,12 +277,13 @@ The page SHALL provide a non-interactive full-screen veil outside the mirrored c
 - **AND** the measurements update continuously while the resize sequence runs
 - **AND** they use the current container size without waiting for layout
 - **WHEN** the mirror emits `resizeEnd` after the 500ms debounce
-- **THEN** it holds briefly before fading out
+- **THEN** it holds 475ms and then fades out over 250ms
+- **AND** it is completely gone roughly 0.7s after `resizeEnd`
 - **AND** it never intercepts pointer events
 
 #### Scenario: Programmatic refresh does not pulse
 
-- **WHEN** `mirror.refresh()` or a cover tuning update emits `resize` without a resize lifecycle
+- **WHEN** `mirror.refresh()` emits `resize` without a resize lifecycle
 - **THEN** the veil stays hidden
 - **AND** only the dimension labels may update
 
@@ -308,62 +365,31 @@ The nested canvas SHALL update live through both the WebGL and SVG mirror backen
 - **WHEN** the content canvas animates while the SVG backend is active
 - **THEN** the mirrored bands change with the canvas content
 
-### Requirement: Floating surface panel
+### Requirement: Fixed visual parameters
 
-The page SHALL provide a floating panel outside the mirror stage. It SHALL start collapsed in the bottom-right corner and open on demand.
+The page SHALL NOT expose a runtime tuning panel. The two former knobs SHALL be baked into the stylesheet: the cover bottom rule SHALL be `6px` high and the sideview image SHALL sit at `150%` of its column, anchored at the content's bottom-right corner. The cover content-to-rule gap SHALL stay `32px`, the text translation `0px`, and the surface colours SHALL be constants: centre `#ffffff` and particles `#242622`. Feather SHALL stay fixed at `72px`.
 
-The panel SHALL adjust particle colour, centre colour, cover bottom-rule height, and the sideview slot's vertical translation. The cover content-to-rule gap SHALL remain fixed at 32px and the text translation at 0. Feather SHALL remain fixed at 72px. It SHALL show backend/layout sizes and provide `Copy config`, `Reset`, `localStorage`, and a collapse toggle.
+#### Scenario: No tuning panel
 
-#### Scenario: Starts collapsed
+- **WHEN** the page is inspected
+- **THEN** no floating panel, collapse toggle, slider, colour input, `Copy config`, or `Reset` control exists
+- **AND** no tuning value is read from or written to `localStorage`
 
-- **WHEN** the page first loads
-- **THEN** the tuning panel is collapsed and shows only its header
-- **AND** it does not overlap the top paging controls
-- **WHEN** the header toggle is activated
-- **THEN** the panel opens with its controls
+#### Scenario: Baked cover defaults
 
-#### Scenario: Surface colours change live
+- **WHEN** the cover slide is active
+- **THEN** the bottom rule is `6px` high, spans the content, and sits on the content bottom edge
+- **AND** the sideview image renders at `150%` scale, anchored at the content bottom-right, with only the fixed `2px` right nudge
+- **AND** the content-to-rule gap is `32px` and the text lockup keeps `0` vertical translation
+- **AND** the sideview image stays loaded and keeps `object-fit: contain`
 
-- **WHEN** the particle colour or centre colour control changes
-- **THEN** the content field and mirror root update without rebuilding the mirror
-
-#### Scenario: Cover spacing changes live
-
-- **WHEN** the line or image-Y control changes
-- **THEN** the bottom-rule height or the sideview translation updates
-- **AND** the content-to-rule gap stays `32px` and the text lockup stays at `0` vertical translation
-- **AND** image translate moves only the sideview slot
-- **AND** the sideview stroke stays fixed at 2px
-
-#### Scenario: Fixed settings are not editable
-
-- **WHEN** the panel is inspected
-- **THEN** it contains no fade, blur, WebGL scale, SVG map, feather, cover-gap, or text-translate controls
-- **AND** it shows the fixed feather of `72`, cover gap of `32px`, and text translation of `0px`
-- **AND** `Copy config` reports the fixed backend values, deck state, cover bottom-rule/gap/translations, parallax depths, and quadrant filter/pointer settings
-
-#### Scenario: Feather is fixed
+#### Scenario: Fixed surface and filter values
 
 - **WHEN** either backend is active
-- **THEN** its filter feather is `72`
-- **AND** no control can change it
-
-#### Scenario: Reset restores defaults
-
-- **WHEN** the reset action is used
-- **THEN** the adjustable colours, bottom-rule height, and image translation return to defaults
-- **AND** the fixed cover gap remains `32px` and the fixed text translation remains `0px`
-- **AND** the active mirror receives the fixed feather `72` and the fixed backend options
-- **AND** the content field receives the default centre and particle colours
-- **AND** the saved tuning value is replaced with defaults
-
-#### Scenario: Tuning persists
-
-- **WHEN** a visitor reloads the page after changing panel values
-- **THEN** the saved colours, bottom-rule height, and image translation are restored
-- **AND** the cover gap is still `32px` and the text translation is still `0px`
-- **AND** the mirror is created with the fixed feather `72`
-- **AND** the content field starts with those values
+- **THEN** the content field draws on `#ffffff` with `#242622` particles
+- **AND** the mirror feather is `72` and cannot be changed at runtime
+- **AND** the WebGL and SVG backend options are only supplied at creation time
+- **AND** layout and backend diagnostics remain readable through `window.__mirrorHome.getState()`
 
 ### Requirement: Rising particle field
 
@@ -427,7 +453,7 @@ If a Canvas 2D context cannot be created, the page SHALL keep a static CSS conte
 
 ### Requirement: Reusable parallax module
 
-The project SHALL provide a shared parallax module that reads each layer's `data-parallax` depth, updates only layer transforms, settles to idle, and cleans up on destroy. `mirror-2610` SHALL mount it on the cover, quadrant, and ranking slides, with distinct depths for the cover text, quadrant copy, and ranking board/cards; the two ranking labels SHALL share one depth. It SHALL scale its displacement down on narrow viewports.
+The project SHALL provide a shared parallax module that reads each layer's `data-parallax` depth, updates only layer transforms, settles to idle, and cleans up on destroy. `mirror-2610` SHALL mount it on the cover, quadrant, ranking, work detail, and closing slides, with distinct depths for the cover text, quadrant copy, ranking board/cards, and the closing lockup; the two ranking labels SHALL share one depth. It SHALL scale its displacement down on narrow viewports.
 
 #### Scenario: Depth declaration
 
@@ -457,6 +483,13 @@ The project SHALL provide a shared parallax module that reads each layer's `data
 - **AND** hovering a card raises only that card to a nearer depth
 - **AND** leaving the card restores its base depth
 
+#### Scenario: Closing depth layers
+
+- **WHEN** the closing slide is inspected
+- **THEN** the wordmark carries a far `data-parallax` depth and the detail copy a nearer one
+- **AND** only the lockup elements translate
+- **AND** the two sheet rules do not translate
+
 #### Scenario: Module cleanup
 
 - **WHEN** the parallax instance is destroyed
@@ -466,14 +499,14 @@ The project SHALL provide a shared parallax module that reads each layer's `data
 
 ### Requirement: Slide deck content
 
-The content area SHALL present four mirrored slides: a cover, a quadrant page, a ranking page, and a work detail page. Exactly one slide SHALL be active. Each slide SHALL contain non-empty editorial copy and SHALL live inside the mirrored content subtree. The quadrant slide SHALL use an enlarged serif hierarchy with titles and the centre mark set substantially larger than the detail copy.
+The content area SHALL present five mirrored slides: a cover, a quadrant page, a ranking page, a work detail page, and a closing page. Exactly one slide SHALL be active. Each slide SHALL contain non-empty editorial copy and SHALL live inside the mirrored content subtree.
 
-#### Scenario: Four content slides
+#### Scenario: Five content slides
 
 - **WHEN** the content is inspected
-- **THEN** it contains four slides with non-empty editorial copy
+- **THEN** it contains five slides with non-empty editorial copy
 - **AND** the cover presents `CEA GameJam`, `2026.10`, and `参赛作品展示`
-- **AND** the remaining slides cover the quadrant page, the ranking page, and `03 / Work`
+- **AND** the remaining slides cover the quadrant page, the ranking page, the work detail page, and the closing page
 
 #### Scenario: Quadrant page structure
 
@@ -482,6 +515,7 @@ The content area SHALL present four mirrored slides: a cover, a quadrant page, a
 - **AND** each copy group and the centre mark have no visible outer border or background
 - **AND** the four serif titles read `时间`, `主题`, `限制`, and `评分`
 - **AND** all titles are centred
+- **AND** the titles and the centre mark use an enlarged serif hierarchy, substantially larger than the detail copy
 - **AND** the page has no eyebrow or footer separator
 - **AND** the centre mark sits below the filter panels
 
@@ -514,16 +548,19 @@ The content area SHALL present four mirrored slides: a cover, a quadrant page, a
 - **THEN** it has no eyebrow, footer divider, or text border
 - **AND** the bottom-left lockup puts `CEA GameJam` and `2026.10` on one baseline, with `参赛作品展示` below
 - **AND** all cover text is serif and left aligned
-- **AND** the bottom-right shows a blank triangular `ellia / sideview` placeholder with a 2px outline
-- **AND** the text lockup and sideview slot are bottom aligned
+- **AND** the bottom-right shows the transparent clipped `ellia / sideview` image at its native `1401/978` ratio
+- **AND** the image uses `object-fit: contain`, renders at the fixed `150%` scale, and is anchored flush to the content bottom-right
+- **AND** the image is nudged `2px` past the right content edge so the rendered edge has no white seam
+- **AND** the image has finished loading before the mirror mounts
+- **AND** the image is positioned independently of the text lockup and does not reduce its column width
 - **AND** the brand/date line, the title, and the two columns have breathing room rather than sitting flush
-- **AND** a black rule (3px by default) spans the content bottom below the lockup and placeholder
+- **AND** a black rule (`6px`) spans the content bottom below the lockup and image
 - **AND** the rule sits `32px` below the lowest cover content
 
 #### Scenario: Cover fade order
 
 - **WHEN** the cover enters or leaves
-- **THEN** the brand fades first, the date second, the exhibition title third, and the sideview placeholder fourth
+- **THEN** the brand fades first, the date second, the exhibition title third, and the sideview image fourth
 - **AND** the persistent sheet rules do not fade with the slide
 - **AND** the exit uses a shorter independent delay for each element
 
@@ -548,7 +585,7 @@ The content area SHALL present four mirrored slides: a cover, a quadrant page, a
 
 ### Requirement: Persistent sheet rules
 
-The deck SHALL contain two solid absolute rules outside the slide fade groups, clipped by the content overflow. They SHALL overlap into the cover bottom rule, rotate into the quadrant cross, become two vertical columns on the ranking page, and become a rail divider plus footer line on the work detail page. Separate quadrant rule elements SHALL NOT remain.
+The deck SHALL contain two solid absolute rules outside the slide fade groups, clipped by the content overflow. They SHALL follow the slides as an overlapping cover rule, a quadrant cross, ranking columns, detail top and bottom frames, and closing 45° cuts through the midpoints of the content's left and right edges. Separate quadrant rule elements SHALL NOT remain.
 
 #### Scenario: Cover bottom rule
 
@@ -581,8 +618,12 @@ The deck SHALL contain two solid absolute rules outside the slide fade groups, c
 - **WHEN** the deck moves to the ranking slide
 - **THEN** the rules separate into the two vertical columns
 - **WHEN** the deck moves to the work detail slide
-- **THEN** the left ranking rule stays vertical and moves from 30% to 24%
-- **AND** the right ranking rule turns clockwise into a horizontal footer line at 90%
+- **THEN** both ranking rules turn clockwise by 90° into horizontal rules
+- **AND** they land inside the content top and bottom edges
+- **WHEN** the deck moves to the closing slide
+- **THEN** both rules turn clockwise by a further 45° and travel until each centre sits on the midpoint of a content short edge
+- **AND** the top rule travels to the right short edge and the bottom rule to the left short edge, so neither line crosses over the other
+- **AND** each rule crosses its edge exactly at its own centre, so the two visible cuts run at 45° across the top-right and bottom-left corners
 - **WHEN** the deck returns to the cover
 - **THEN** the rules transition back to the overlapping bottom rule
 
@@ -657,49 +698,189 @@ The ranking slide SHALL frame a right-shifted scrollable team list between the p
 
 ### Requirement: Work detail page
 
-The work detail slide SHALL inset a vertically centred intro card in a 24% left rail, frame a dominant video in the main column, overlap an opaque work card at the right edge, and reserve a compact 10% footer. The left ranking rule SHALL stay vertical at 24%, while the right rule SHALL turn clockwise into a 90% footer line. All detail text SHALL use the serif stack. Work data SHALL render from `data/ranking.json` before mirror mount.
+The work detail slide SHALL frame the content with horizontal persistent rules, a 24% title/source rail, a per-work video panel, a chrome-free action tray, and a 7% dash-pager footer. Wheel input inside the frame SHALL switch works. Work data SHALL render from `data/ranking.json` and `data/works.json` before mirror mount.
 
 #### Scenario: Detail composition
 
 - **WHEN** the work detail slide is active
-- **THEN** the intro card is inset in the narrow 24% rail, vertically centred, and has a transparent background and 1px border
-- **AND** the intro is narrower than the previous rail so the video frame gains the width
-- **AND** the video sits inside the main column with breathing room above, below, and to its right
-- **AND** the opaque right-hand work card overlaps the video's right edge and crosses the footer rule
-- **AND** the video and side card both remain inside the content rectangle
+- **THEN** two 3px horizontal rules lie inside the content top and bottom edges
+- **AND** the left rail holds a 1px-boxed work title, that work's description, and a `来自：` team line above a 1px rule, with symmetric tight padding
+- **AND** that whole title/body/team group is vertically centred in the rail without stretching the body or pinning the team line to the bottom
+- **AND** the video keeps a small right gap of roughly 3% of the content width
+- **AND** the video panel renders only the current work's clip, with no caption rows, wordmark, counter, or ratio marks
+- **AND** a work without a clip shows a centred `暂无视频 / NO CLIP YET` placeholder inside the framed stage instead of an empty panel
+- **AND** the clip is contained in a fitted stage so it never exceeds the panel
+- **AND** no clip element exists until the detail slide is first activated
+- **AND** a clip is only visible while the detail slide is live, because the composited video layer ignores ancestor visibility
+- **AND** clips are faststart-encoded so metadata precedes the media data
+- **AND** four 2px L-shaped corner marks sit in the padding ring, offset outward from the clip corners by half their own size
+- **AND** the clip plays with sound on loop while the slide is active and pauses when the slide leaves
+- **AND** a browser refusing unmuted autoplay falls back to muted playback instead of stalling
+- **AND** `prefers-reduced-motion` keeps the clip paused on its first frame
+
+#### Scenario: Detail work media and links
+
+- **WHEN** a work record in `data/works.json` is selected
+- **THEN** its `description` fills the rail body
+- **AND** its `video.src` becomes the panel source, or the panel empties when the record has no video
+- **AND** an empty panel drops the source, pauses the element, keeps the stage ratio and corner marks, and relabels itself as having no video
+- **AND** `links.download`, `links.play`, and `links.project` each enable exactly one action button when they hold a URL
+- **AND** a missing link leaves its button disabled and faded
+- **AND** enabled actions open their stored URL in a new tab
+- **AND** records are keyed by `teamId`, one per team
+
+#### Scenario: Detail clip loading veil
+
+- **WHEN** a work with a clip is selected
+- **THEN** a white veil slides in inside a clipped window before the clip is shown
+- **AND** a forward switch enters from below and leaves through the top
+- **AND** a backward switch enters from above and leaves through the bottom
+- **AND** the veil shows a loading label, the work name, a progress bar, and a percentage
+- **AND** the veil slides out through the top only after the clip reports `canplay`
+- **AND** the visible clip is swapped while the veil still covers the panel, so the exit reveals the new clip rather than the old one
+- **AND** a clip that is already loaded replays the same cycle with shortened timings
+- **AND** the bar reports the buffered span as a share of the clip duration
+- **AND** the bar is accented until `canplay` fires and turns to ink afterwards
+- **AND** an unknown duration falls back to an indeterminate sweep
+- **AND** playback starts as soon as `canplay` fires instead of after the whole file is fetched
+
+#### Scenario: Detail clip stall layer
+
+- **WHEN** the active clip fires `waiting` or `stalled` during playback
+- **THEN** a translucent `Loading` sheet appears immediately over the clip with no transition
+- **WHEN** the clip fires `playing`, `canplay`, `seeked`, or `pause`, or the slide leaves
+- **THEN** the sheet disappears immediately
+- **AND** the sheet never intercepts pointer events
+- **AND** the sheet stacks below the loading veil and is never shown while the veil is presenting a switch
+- **AND** a failed clip keeps the veil parked in an accent error state, never uncovering the panel or swapping the clip
+- **AND** switching to a working clip afterwards still exits the veil normally
+
+#### Scenario: Detail clip switch locking
+
+- **WHEN** the veil is entering or exiting
+- **THEN** wheel, arrow, and click switches are ignored and the queued wheel delta is dropped
+- **WHEN** the veil is parked on a loading clip and another work is selected
+- **THEN** the veil does not replay its entrance or exit
+- **AND** only the work name and progress display change
+- **AND** the previously started load keeps running instead of being cancelled
+- **AND** eviction only removes ready, inactive clips
+- **AND** the action tray sits at the video's lower-right corner, protrudes slightly past its right and bottom borders, and remains inside the content
+- **AND** the footer occupies 7% of the content height
+- **AND** the former featured side card and award footer are absent
+
+#### Scenario: Detail rule transition
+
+- **WHEN** the deck moves from the ranking slide to the work detail slide
+- **THEN** both ranking rules turn clockwise by 90° into horizontal detail rules
+- **AND** the top rule lands on the content top edge and the bottom rule on the content bottom edge
+- **AND** neither rule takes a counter-clockwise or 270° path
 
 #### Scenario: Detail typography
 
 - **WHEN** the work detail slide is rendered
-- **THEN** every label, body, team name, award, score, and button uses the serif stack
-- **AND** the footer rank mark uses two-digit zero-padded numbering (`01`, `02`, …) in the serif stack at 1.5× the previous footer scale
-- **AND** the footer award is a bordered tag at roughly 0.8× its previous type size
-- **AND** the rank mark and award tag are horizontally centred in the left rail and vertically centred, with extra right margin on the rank mark
-- **AND** no detail element falls back to the sans or mono faces
+- **THEN** the work title, body, source, team, and action labels use the serif stack
+- **AND** the body copy is at least 13px, the action labels at least 15px, and their latin subtitles at least 9px
+- **AND** the title is centred inside its 1px outline box
+- **AND** the paging arrows reuse the mono deck-button face without turning editorial copy into sans or mono
 
 #### Scenario: Detail footer
 
 - **WHEN** the work detail slide is active
-- **THEN** the footer shows the selected team's rank and award in the left rail
-- **AND** the work title is centred in the main column between two plain outline triangle buttons
-- **AND** ranks 1–3 use the accent colour for their numbers
-- **AND** an award tag uses the accent colour for its text and border
-- **AND** teams without an award keep a neutral `入围作品` tag
+- **THEN** the work switcher is centred in the reduced 7% footer and keeps a fixed gap above the bottom rule
+- **AND** the footer no longer carries the work counter, which the pager replaces
+- **AND** both arrows use standalone button styles matching the deck-button dimensions and glyph face but stay bare at rest
+- **AND** hovering an arrow draws only its 1px outline with a border-colour transition, keeping the transparent fill and black glyph
+- **AND** 15 equal-length dash segments sit between the arrows with no gaps, and only the current work's segment turns solid black at twice the idle thickness
+- **AND** each segment is a button with a 28–34px hover band; hovering or focusing a non-current segment triples its bar height to 24px
+- **AND** clicking a segment jumps straight to that work, and the current segment carries `aria-current`
+- **AND** the footer no longer repeats the work title or an award tag
 
 #### Scenario: Detail work switch
 
-- **WHEN** the detail arrows are used
-- **THEN** the intro team, video count, side index, award, score, and footer title update together
-- **AND** the first work is `#1`, `镜界`, `吴彦组`, and `完成度奖`
-- **AND** switching past the last work wraps to the first
+- **WHEN** the detail arrows are used or the wheel moves with the pointer inside the top/bottom rules
+- **THEN** the title, team, pager mark, and slide label update together and animate on entry
+- **AND** the rail copy animates in three staggered `560ms` steps and the veil takes `560ms` in and `520ms` out
+- **AND** wheel input is captured with a threshold and a short lock so one gesture advances one work
+- **AND** the deck stays on the detail slide while the pointer is inside the frame
+- **AND** wheel input outside the frame resumes deck navigation
+- **AND** stepping before the first work hands the gesture to the deck and turns to the previous page
+- **AND** stepping past the last work hands the gesture to the deck and turns to the closing page
+- **AND** `prefers-reduced-motion` skips the work-switch animation
+
+#### Scenario: Detail action tray
+
+- **WHEN** the work detail slide is at rest
+- **THEN** the action tray is hidden
+- **AND** the tray has no background, border, title, close button, or footnote of its own
+- **WHEN** the video is hovered, clicked, or focused and confirmed with `Enter` / `Space`
+- **THEN** the tray becomes visible and the video reports `aria-expanded="true"`
+- **AND** the pointer can move from the video onto the tray's protruding corner without dismissing it
+- **AND** an outside click or `Escape` dismisses it
+- **AND** the shared tools stack reveals a volume row directly above the tray, with the same hover and pin behaviour
+- **AND** using the volume slider with the mouse does not keep the stack open: only keyboard focus pins it
+- **AND** the volume slider drives the active clip's volume and new clips inherit the current value
+- **AND** the tray holds three white, 1px-outlined buttons: `下载 / Download`, `在线游玩 / Play online`, and `项目主页 / Project page`
+- **AND** the download action alone takes the accent colour for its outline and label
+- **AND** enabled buttons invert on hover, with download filling in the accent and the others filling in ink
+- **AND** disabled buttons fade their white face, outline, and label instead of staying fully inked
+- **AND** an enabled action opens the URL bound to the current work, and a button with no URL stays disabled
+
+#### Scenario: Detail parallax
+
+- **WHEN** the work detail slide is active and the pointer moves
+- **THEN** the left rail text uses the far `0.16` depth and the video plane uses the nearer `0.52` depth
+- **AND** the action tray shares the video depth so it keeps hugging the video's corner
+- **AND** the tray keeps enough inset for that deeper shift to stay inside the content
+- **AND** `prefers-reduced-motion` parks both layers at zero offset
 
 #### Scenario: Narrow detail
 
 - **WHEN** the work detail slide is rendered at or below `700px`
-- **THEN** the intro, video, and footer stack vertically as 24% / 66% / 10%
-- **AND** the right-hand work card and the vertical rule are hidden
-- **AND** the footer line remains at 90% and the work switcher stays centred
+- **THEN** the intro, video, and footer stack vertically as 24% / 69% / 7%
+- **AND** both horizontal rules remain on the content top and bottom edges
+- **AND** tapping the video opens the tray, and a second tap closes it
+- **AND** the opened tray remains inside the content
 - **AND** the slide has no horizontal or vertical overflow
+
+### Requirement: Closing page
+
+The deck SHALL end with a closing slide that carries no interactive controls. It SHALL centre the CEA wordmark inside the content rectangle, place muted placeholder copy directly below it, and let the two persistent rules settle as 45° cuts through the midpoints of the content's left and right edges.
+
+#### Scenario: Closing lockup
+
+- **WHEN** the closing slide is active
+- **THEN** the wordmark is centred horizontally in the content and the whole lockup is centred vertically
+- **AND** the wordmark keeps the `315.5 / 108` ratio of `assets/mirror-26/cea-logo.svg` and inherits the page ink through `currentColor`
+- **AND** the detail copy sits below the wordmark with a fixed gap and no frame, rule, or button
+- **AND** both detail lines are muted (alpha below 0.6), with the secondary line lighter than the primary one
+- **AND** the closing slide contains no link, button, media element, or pager
+
+#### Scenario: Closing rule cuts
+
+- **WHEN** the closing slide is active
+- **THEN** each rule renders at 45° with its centre on the midpoint of a content short edge
+- **AND** the rule that framed the content top sits on the right edge and the rule that framed the content bottom sits on the left edge
+- **AND** the rule crosses that edge exactly at its own centre, which is that edge's midpoint
+- **AND** one cut crosses the top-right corner and the other the bottom-left corner
+- **AND** both rules keep the 3px rule thickness and stay clipped at the content boundary
+- **AND** the cut geometry follows the content rectangle rather than a portrait layout, so no portrait tuning is required
+
+#### Scenario: Closing transition and fade
+
+- **WHEN** the deck moves from the work detail slide to the closing slide
+- **THEN** both rules turn clockwise from 180° to 225° and travel to the short-edge midpoints inside the same `720ms` rule transition, which starts with the slide fade
+- **AND** the top rule slides right into the top-right cut and the bottom rule slides left into the bottom-left cut
+- **AND** the wordmark fades in before the two detail lines through staggered per-element delays
+- **WHEN** the deck returns to the work detail slide
+- **THEN** the rules turn back to the 180° top/bottom frame
+- **AND** `prefers-reduced-motion` jumps both the slide and the rules to their final state
+
+#### Scenario: Closing page boundary
+
+- **WHEN** the closing slide is active
+- **THEN** the next control is disabled and the previous control stays enabled
+- **AND** the deck does not wrap past the closing slide
+- **AND** stepping past the last work on the detail slide opens the closing slide instead of stopping
 
 ### Requirement: Quadrant colour filters
 
@@ -753,7 +934,7 @@ The content SHALL keep the native cursor visible and draw a light-grey ring arou
 
 #### Scenario: Ring on every slide
 
-- **WHEN** the deck moves between the cover, quadrant, ranking, and work detail slides with the pointer inside the content
+- **WHEN** the deck moves between the cover, quadrant, ranking, work detail, and closing slides with the pointer inside the content
 - **THEN** the ring stays visible at the pointer on the new slide
 - **AND** only the quadrant slide applies quadrant hover states
 
@@ -767,7 +948,7 @@ The content SHALL keep the native cursor visible and draw a light-grey ring arou
 
 #### Scenario: Pointer leaves the content
 
-- **WHEN** the pointer exits the content rectangle, enters the tuner or paging controls, or the boot layer is active
+- **WHEN** the pointer exits the content rectangle, enters the paging controls, or the boot layer is active
 - **THEN** the custom ring and all quadrant hover states are hidden
 - **AND** the native cursor remains available outside the content
 
