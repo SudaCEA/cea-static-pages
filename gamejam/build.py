@@ -12,8 +12,10 @@ from __future__ import annotations
 
 REQUIRED_RUNTIME = (
     "mirror-2610/index.html",
-    "mirror-2610/mirror-lab.html",
     "mirror-2610/content-field.js",
+    "mirror-2610/data/ranking.json",
+    "mirror-2610/data/works.json",
+    "assets/mirror-26/cea-logo.svg",
     "js/effects/mirror.js",
     "js/effects/fade.js",
     "js/effects/parallax.js",
@@ -29,13 +31,13 @@ MIN_BUNDLE_BYTES = 500_000
 
 BUNDLE = "libs/three/three.bundle.js"
 BUNDLE_ENTRY = "libs/three/src/three-bundle-entry.js"
-LAB_PAGE = "mirror-2610/mirror-lab.html"
 
 # These must never leak into the deployed page.
 FORBIDDEN_STAGE_PATHS = (
     "tools",
     "build.py",
     "page.toml",
+    "mirror-2610/mirror-lab.html",
     ".gitignore",
     "libs/three/src",
     "libs/three/three-bundle-entry.js",
@@ -73,12 +75,6 @@ def prebuild(ctx) -> None:
             f"{BUNDLE} is older than {BUNDLE_ENTRY}; "
             "run tools/build-three-bundle.ps1"
         )
-
-    lab = ctx.source / LAB_PAGE
-    if lab.is_file():
-        lab_text = lab.read_text(encoding="utf-8")
-        if "three-bundle-loader.js" not in lab_text:
-            ctx.warn(f"{LAB_PAGE} no longer imports the three bundle loader")
 
     ctx.log(f"validated {len(REQUIRED_RUNTIME)} required runtime files")
 

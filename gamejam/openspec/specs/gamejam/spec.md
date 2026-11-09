@@ -8,7 +8,7 @@ Define the public static page set for the GameJam 2026 site and the runtime, vis
 
 ### Requirement: Published page set
 
-The site SHALL publish a Material 3 directory page at `/`, a mirror homepage at `/mirror-2610/`, and a diagnostic lab at `/mirror-2610/mirror-lab.html`.
+The site SHALL publish a Material 3 directory page at `/` and a mirror homepage at `/mirror-2610/`. The diagnostic lab `mirror-2610/mirror-lab.html` SHALL remain a source-only development page: it SHALL stay in the source tree for the probe scripts, and SHALL NOT be part of the build output.
 
 The directory page SHALL list `MIRROR / 2610` as its only page entry and SHALL NOT list the mirror lab.
 
@@ -20,9 +20,10 @@ The directory page SHALL list `MIRROR / 2610` as its only page entry and SHALL N
 
 #### Scenario: Lab remains directly addressable
 
-- **WHEN** a visitor opens `/mirror-2610/mirror-lab.html` directly
-- **THEN** the diagnostic lab loads
-- **AND** it is still absent from the directory page
+- **WHEN** the page is built
+- **THEN** `dist/gamejam/` contains no `mirror-2610/mirror-lab.html`
+- **AND** the lab file is still present in the source tree for local probes
+- **AND** the page build hook fails if the lab leaks into the staging tree
 
 #### Scenario: Directory theme switching
 
@@ -200,8 +201,8 @@ The build SHALL include the directory page, both `mirror-2610` pages, shared eff
 
 - **WHEN** `python build.py gamejam --clean --strict` runs
 - **THEN** the build succeeds
-- **AND** `dist/gamejam/` contains the root index, both mirror-2610 pages, `js/effects/`, and `libs/three/`
-- **AND** it contains no `tools/`, `page.toml`, `build.py`, or `libs/three/src/` paths
+- **AND** `dist/gamejam/` contains the root index, `mirror-2610/index.html`, its `assets/` and `data/`, `assets/mirror-26/cea-logo.svg`, `js/effects/`, and `libs/three/`
+- **AND** it contains no `tools/`, `page.toml`, `build.py`, `libs/three/src/`, or `mirror-2610/mirror-lab.html` paths
 
 ### Requirement: Resize structure veil
 

@@ -16,7 +16,7 @@ ellia-pages/
 │  ├─ mirror-2610/
 │  │  ├─ index.html            # mirror 主题主页
 │  │  ├─ content-field.js      # canvas 背景与上升粒子场
-│  │  └─ mirror-lab.html       # mirror.js 实验页
+│  │  └─ mirror-lab.html       # mirror.js 实验页（源码专用，不发布）
 │  ├─ js/
 │  │  └─ effects/
 │  │     ├─ fade.js            # 逐元素淡入淡出序列
@@ -38,7 +38,7 @@ ellia-pages/
 
 `mirror-2610/index.html` 使用 `js/effects/mirror.js`、`js/effects/fade.js`、`js/effects/parallax.js` 和共享 three loader；启动时先加载 three，再预检 HTML-in-Canvas 并选择 WebGL / SVG 后端。`libs/three/` 由 mirror lab 和后续 WebGL 页面共享；`parallax.js` 挂载在封面文字、象限文本和排行榜图层上。
 
-目录页 `gamejam/index.html` 是一个独立的 Material 3 风格首页，支持切换 seed color；只在“页面”区展示 `MIRROR / 2610`，`mirror-lab.html` 保留为直接访问的诊断页面，不列入目录页。
+目录页 `gamejam/index.html` 是一个独立的 Material 3 风格首页，支持切换 seed color；只在“页面”区展示 `MIRROR / 2610`。`mirror-lab.html` 只保留在源码树里给探针脚本用，既不在目录页出现，也不会进入构建产物。
 
 当前页面规格记录在 [gamejam/openspec/specs/gamejam/spec.md](gamejam/openspec/specs/gamejam/spec.md)。
 
@@ -199,7 +199,8 @@ dist/
    ├─ mirror-2610/
    │  ├─ index.html
    │  ├─ content-field.js
-   │  └─ mirror-lab.html
+   │  ├─ assets/
+   │  └─ data/
    ├─ js/
    │  └─ effects/
    │     └─ mirror.js
@@ -287,7 +288,7 @@ def postbuild(ctx):
 
 - 页面目录：<http://127.0.0.1:4173/>
 - mirror 主页：<http://127.0.0.1:4173/mirror-2610/>
-- mirror 实验页：<http://127.0.0.1:4173/mirror-2610/mirror-lab.html>
+- mirror 实验页：<http://127.0.0.1:4173/mirror-2610/mirror-lab.html>（只在源码树里，`dist` 中不存在）
 - 构建产物预览：把 `--directory` 改为 `dist/gamejam`，并换一个端口。
 
 页面测试脚本：
@@ -303,8 +304,10 @@ def postbuild(ctx):
 # 幻灯片 deck（翻页/淡入淡出/双后端/移动端）
 .\.venv\Scripts\python.exe gamejam\tools\probe_deck.py
 ```
+`mirror-2610/mirror-lab.html` 是开发/探针专用页面，`page.toml` 已把它排除在构建之外，`gamejam/build.py` 也会在它泄漏到 `dist` 时报错。
 
-前三个脚本默认访问 `http://127.0.0.1:4173/mirror-2610/mirror-lab.html`；内容场和 deck 探测访问 `http://127.0.0.1:4173/mirror-2610/`，默认使用 Chrome Beta。
+
+前三个脚本默认访问 `http://127.0.0.1:4173/mirror-2610/mirror-lab.html`（因此要用源码目录起服务）；内容场、deck 与 origin trial 探测访问 `http://127.0.0.1:4173/mirror-2610/`，默认使用 Chrome Beta。
 
 ## three 运行时 bundle
 

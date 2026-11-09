@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-08T19:51:22+08:00",
+  "generator": "tools/generate_works.py",
+  "source": "mirror-2610/data/ranking.json",
+  "note": "测试数据：视频与链接均为占位，等待真实投稿替换",
+  "works": [
+    {
+      "teamId": 7,
+      "workTitle": "镜界",
+      "teamName": "吴彦组",
+      "description": "《镜界》由「吴彦组」在 48 小时内完成。作品围绕「镜」展开，把反射、时间与操作手感拧成同一条线索。",
+      "video": {
+        "src": "assets/video-placeholder.mp4"
+      },
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/07/build.zip",
+        "play": "https://example.com/cea-gamejam-2026/works/07/play",
+        "project": "https://example.com/cea-gamejam-2026/works/07"
+      }
+    },
+    {
+      "teamId": 8,
+      "workTitle": "破镜",
+      "teamName": "欢乐斗地组",
+      "description": "「欢乐斗地组」的《破镜》把镜面当作关卡本身：每一次反射都会改变路线，玩家需要在倒影与现实之间往返。",
+      "video": {
+        "src": "assets/video-placeholder.mp4"
+      },
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/08/build.zip",
+        "play": null,
+        "project": null
+      }
+    },
+    {
+      "teamId": 4,
+      "workTitle": "镜间",
+      "teamName": "啊啊啊啊啊gamejam我们喜欢你",
+      "description": "《镜间》是「啊啊啊啊啊gamejam我们喜欢你」的限时作品。核心玩法建立在一面会记忆的镜子上，走过的路径会在倒影里重演。",
+      "video": null,
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/04/build.zip",
+        "play": "https://example.com/cea-gamejam-2026/works/04/play",
+        "project": "https://example.com/cea-gamejam-2026/works/04"
+      }
+    },
+    {
+      "teamId": 16,
+      "workTitle": "红之镜demo",
+      "teamName": "关于我独自从零开始为鼠大献上美好祝福这件事",
+      "description": "「关于我独自从零开始为鼠大献上美好祝福这件事」用《红之镜demo》回答同一个题目：如果镜子比你先一步行动，你还能相信看到的方向吗？",
+      "video": {
+        "src": "assets/video-placeholder.mp4"
+      },
+      "links": {
+        "download": null,
+        "play": "https://example.com/cea-gamejam-2026/works/16/play",
+        "project": null
+      }
+    },
+    {
+      "teamId": 11,
+      "workTitle": "灯镜余辉",
+      "teamName": "听说你用了中文的逗号?",
+      "description": "《灯镜余辉》由「听说你用了中文的逗号?」在 48 小时内完成。作品围绕「镜」展开，把反射、时间与操作手感拧成同一条线索。",
+      "video": {
+        "src": "assets/video-placeholder.mp4"
+      },
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/11/build.zip",
+        "play": null,
+        "project": "https://example.com/cea-gamejam-2026/works/11"
+      }
+    },
+    {
+      "teamId": 3,
+      "workTitle": "镜界",
+      "teamName": "啊，我也要做开发吗？",
+      "description": "「啊，我也要做开发吗？」的《镜界》把镜面当作关卡本身：每一次反射都会改变路线，玩家需要在倒影与现实之间往返。",
+      "video": null,
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/03/build.zip",
+        "play": "https://example.com/cea-gamejam-2026/works/03/play",
+        "project": null
+      }
+    },
+    {
+      "teamId": 2,
+      "workTitle": "镜界线",
+      "teamName": "双区战车",
+      "description": "《镜界线》是「双区战车」的限时作品。核心玩法建立在一面会记忆的镜子上，走过的路径会在倒影里重演。",
+      "video": {
+        "src": "assets/video-placeholder.mp4"
+      },
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/02/build.zip",
+        "play": "https://example.com/cea-gamejam-2026/works/02/play",
+        "project": "https://example.com/cea-gamejam-2026/works/02"
+      }
+    },
+    {
+      "teamId": 9,
+      "workTitle": "镜舱",
+      "teamName": "从来没觉得写程序开心过",
+      "description": "「从来没觉得写程序开心过」用《镜舱》回答同一个题目：如果镜子比你先一步行动，你还能相信看到的方向吗？",
+      "video": {
+        "src": "assets/video-placeholder.mp4"
+      },
+      "links": {
+        "download": null,
+        "play": null,
+        "project": null
+      }
+    },
+    {
+      "teamId": 5,
+      "workTitle": "镜愈",
+      "teamName": "琪露诺的完美编程教室",
+      "description": "《镜愈》由「琪露诺的完美编程教室」在 48 小时内完成。作品围绕「镜」展开，把反射、时间与操作手感拧成同一条线索。",
+      "video": null,
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/05/build.zip",
+        "play": "https://example.com/cea-gamejam-2026/works/05/play",
+        "project": "https://example.com/cea-gamejam-2026/works/05"
+      }
+    },
+    {
+      "teamId": 13,
+      "workTitle": "MirrorTune/境波乐队",
+      "teamName": "我和GPT",
+      "description": "「我和GPT」的《MirrorTune/境波乐队》把镜面当作关卡本身：每一次反射都会改变路线，玩家需要在倒影与现实之间往返。",
+      "video": {
+        "src": "assets/video-placeholder.mp4"
+      },
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/13/build.zip",
+        "play": "https://example.com/cea-gamejam-2026/works/13/play",
+        "project": null
+      }
+    },
+    {
+      "teamId": 12,
+      "workTitle": "镜与球（4399正版）",
+      "teamName": "《CodeJam啊，我用WPS做的》",
+      "description": "《镜与球（4399正版）》是「《CodeJam啊，我用WPS做的》」的限时作品。核心玩法建立在一面会记忆的镜子上，走过的路径会在倒影里重演。",
+      "video": {
+        "src": "assets/video-placeholder.mp4"
+      },
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/12/build.zip",
+        "play": null,
+        "project": "https://example.com/cea-gamejam-2026/works/12"
+      }
+    },
+    {
+      "teamId": 10,
+      "workTitle": "镜渊",
+      "teamName": "愤怒的孤狼",
+      "description": "「愤怒的孤狼」用《镜渊》回答同一个题目：如果镜子比你先一步行动，你还能相信看到的方向吗？",
+      "video": null,
+      "links": {
+        "download": null,
+        "play": "https://example.com/cea-gamejam-2026/works/10/play",
+        "project": null
+      }
+    },
+    {
+      "teamId": 1,
+      "workTitle": "镜尽余色",
+      "teamName": "寒风叔叔の玉组🦶",
+      "description": "《镜尽余色》由「寒风叔叔の玉组🦶」在 48 小时内完成。作品围绕「镜」展开，把反射、时间与操作手感拧成同一条线索。",
+      "video": {
+        "src": "assets/video-placeholder.mp4"
+      },
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/01/build.zip",
+        "play": "https://example.com/cea-gamejam-2026/works/01/play",
+        "project": "https://example.com/cea-gamejam-2026/works/01"
+      }
+    },
+    {
+      "teamId": 6,
+      "workTitle": "Checkm8!",
+      "teamName": "Checkm8!",
+      "description": "「Checkm8!」的《Checkm8!》把镜面当作关卡本身：每一次反射都会改变路线，玩家需要在倒影与现实之间往返。",
+      "video": {
+        "src": "assets/video-placeholder.mp4"
+      },
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/06/build.zip",
+        "play": null,
+        "project": null
+      }
+    },
+    {
+      "teamId": 15,
+      "workTitle": "见影秘若",
+      "teamName": "大肥鱼要吃多少token？",
+      "description": "《见影秘若》是「大肥鱼要吃多少token？」的限时作品。核心玩法建立在一面会记忆的镜子上，走过的路径会在倒影里重演。",
+      "video": null,
+      "links": {
+        "download": "https://example.com/cea-gamejam-2026/works/15/build.zip",
+        "play": "https://example.com/cea-gamejam-2026/works/15/play",
+        "project": "https://example.com/cea-gamejam-2026/works/15"
+      }
+    }
+  ]
+}

@@ -10,15 +10,20 @@ entry = "index.html"
 include = [
   "index.html",
   "mirror-2610/**",
+  # Shared wordmark, referenced by the closing slide of mirror-2610.
+  "assets/mirror-26/cea-logo.svg",
   "js/effects/**",
   "libs/three/**",
 ]
 
 # libs/three/src is the esbuild input, not a browser asset.
+# mirror-lab.html is a development/probe page; it stays in the source tree and
+# must never be published.
 exclude = [
   "libs/three/src/**",
   "js/effects/**/*.map",
   "libs/three/**/*.map",
+  "mirror-2610/mirror-lab.html",
   "js/**/__pycache__/**",
   "libs/**/__pycache__/**",
 ]
