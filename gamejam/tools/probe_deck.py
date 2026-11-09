@@ -584,18 +584,37 @@ def assert_quadrant_page(page):
     rest = page.evaluate("window.__mirrorHome.quadrant.getState()")
     check(rest["speed"] < 30 and rest["ring"]["size"] <= 40,
           f"ring did not settle to rest: {rest}")
+    # The ring eases towards its speed target, so sample the peak over the whole
+    # swipe instead of one frame 20ms after the last move.
+    page.evaluate(
+        """() => {
+          window.__probeRing = { maxSize: 0, minStroke: 99, maxSpeed: 0, last: null };
+          const until = performance.now() + 450;
+          const tick = () => {
+            const state = window.__mirrorHome.quadrant.getState();
+            const probe = window.__probeRing;
+            probe.maxSpeed = Math.max(probe.maxSpeed, state.speed);
+            probe.maxSize = Math.max(probe.maxSize, state.ring.size);
+            probe.minStroke = Math.min(probe.minStroke, state.ring.stroke);
+            probe.last = state;
+            if (performance.now() < until) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }"""
+    )
     page.mouse.move(art[0] + art[2] * 0.8, art[1] + art[3] * 0.22, steps=18)
-    page.wait_for_timeout(20)
-    fast = page.evaluate("window.__mirrorHome.quadrant.getState()")
-    check(fast["speed"] > rest["speed"] + 100,
+    page.wait_for_timeout(500)
+    fast = page.evaluate("window.__probeRing")
+    check(fast["maxSpeed"] > rest["speed"] + 100,
           f"ring speed did not rise: {rest} -> {fast}")
-    check(fast["ring"]["size"] > rest["ring"]["size"] + 15,
+    check(fast["maxSize"] > rest["ring"]["size"] + 15,
           f"ring did not grow with speed: {rest} -> {fast}")
-    check(fast["ring"]["stroke"] < rest["ring"]["stroke"] - 1.5,
+    check(fast["minStroke"] < rest["ring"]["stroke"] - 1.5,
           f"ring did not thin with speed: {rest} -> {fast}")
-    check(abs(fast["current"]["x"] - fast["target"]["x"]) <= 0.5 and
-          abs(fast["current"]["y"] - fast["target"]["y"]) <= 0.5,
-          f"ring centre did not track the pointer: {fast}")
+    trailing = fast["last"]
+    check(abs(trailing["current"]["x"] - trailing["target"]["x"]) <= 0.5 and
+          abs(trailing["current"]["y"] - trailing["target"]["y"]) <= 0.5,
+          f"ring centre did not track the pointer: {trailing}")
     page.wait_for_timeout(1400)
     back = page.evaluate("window.__mirrorHome.quadrant.getState()")
     check(back["ring"]["size"] <= 40 and back["ring"]["stroke"] >= 4.5,
@@ -2521,26 +2540,57 @@ def assert_pointer_all_slides(page):
 
 
 def assert_navigation(page):
-    page.locator("#deckNext").click()
-    immediate = page.evaluate("window.__mirrorHome.deck.getState()")
-    check(immediate["locked"] is True, f"transition did not lock the deck: {immediate}")
-    check(page.locator("#deckPrev").is_disabled() and page.locator("#deckNext").is_disabled(),
-          "navigation stayed enabled during the fade")
-    page.wait_for_timeout(100)
-    mid = page.evaluate(
+    # Record the first mid-transition frame from inside the page. The exit runs
+    # for 220ms with per-element delays up to 70ms, and a click plus a couple of
+    # evaluate round-trips can already outlast it on a busy machine, so sampling
+    # from Python either catches the untouched first frame or the finished one.
+    page.evaluate(
         """() => {
+          window.__probeFade = null;
           const outgoing = document.querySelector('[data-slide="0"]');
           const items = [...outgoing.querySelectorAll('[data-fade]')];
-          return {
-            state: window.__mirrorHome.deck.getState(),
-            delays: items.map((el) => Number(el.dataset.fadeOutDelay)),
-            opacities: items.map((el) => Number(getComputedStyle(el).opacity)),
-            animationDelays: items.map((el) =>
-              el.getAnimations().map((a) => a.effect.getTiming().delay)
-            )
+          let tries = 0;
+          const tick = () => {
+            if (window.__probeFade) return;
+            const opacities = items.map(
+              (el) => Number(getComputedStyle(el).opacity)
+            );
+            const started = opacities.some((value) => value < 0.99);
+            const finished = opacities.every((value) => value <= 0.001);
+            if (started && !finished) {
+              window.__probeFade = {
+                state: window.__mirrorHome.deck.getState(),
+                delays: items.map((el) => Number(el.dataset.fadeOutDelay)),
+                opacities,
+                animationDelays: items.map(
+                  (el) => el.getAnimations().map(
+                    (a) => a.effect.getTiming().delay
+                  )
+                )
+              };
+              return;
+            }
+            if (++tries > 90) return;
+            requestAnimationFrame(tick);
           };
+          requestAnimationFrame(tick);
         }"""
     )
+    page.locator("#deckNext").click()
+    immediate = page.evaluate(
+        """() => ({
+          state: window.__mirrorHome.deck.getState(),
+          prev: document.getElementById('deckPrev').disabled,
+          next: document.getElementById('deckNext').disabled
+        })"""
+    )
+    check(immediate["state"]["locked"] is True,
+          f"transition did not lock the deck: {immediate}")
+    check(immediate["prev"] and immediate["next"],
+          "navigation stayed enabled during the fade")
+    wait_unlocked(page)
+    mid = page.evaluate("window.__probeFade")
+    check(mid is not None, "the fade-out never produced a mid-transition frame")
     check(len(set(mid["delays"])) > 1, f"fade-out delays are not staggered: {mid}")
     check(len(set(round(value, 2) for value in mid["opacities"])) > 1,
           f"fade-out opacities are not staggered: {mid}")
