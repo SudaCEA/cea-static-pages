@@ -31,6 +31,26 @@
  * (`--enable-features=CanvasDrawElement`). Use `checkHtmlInCanvasSupport()`
  * to probe support and known nested-canvas DPR issues before attempting WebGL.
  *
+ * KNOWN ENGINE GAP — the SVG mode only renders in the Chromium family:
+ *
+ *   - Gecko: `backdrop-filter: url(#filter)` accepts only GPU-accelerated
+ *     filter primitives. `feImage` (both the displacement map and the feather
+ *     mask) and `feDisplacementMap` are not accelerated yet, so they are
+ *     dropped silently and the whole chain collapses to an empty image — the
+ *     mirror bands never paint. Filters built from feFlood/feBlend/
+ *     feColorMatrix/feGaussianBlur still work there.
+ *     https://bugzilla.mozilla.org/show_bug.cgi?id=1896504 (NEW, P2;
+ *     duplicate of the report in bug 1972363)
+ *   - WebKit: `backdrop-filter: url(#filter)` is not implemented at all, so
+ *     neither the bands nor any url()-based tint renders.
+ *     https://bugs.webkit.org/show_bug.cgi?id=245510 (NEW, P2)
+ *
+ * The map's encoding is not a factor: the same filter applied through a plain
+ * `filter:` property renders correctly in Gecko, and data URIs, blob URLs and
+ * same-document element references all fail the same way in `backdrop-filter`.
+ * The failure is in the primitive, not in how the map is mounted. No
+ * engine-specific fallback ships with this module.
+ *
  * WebGL also accepts `webgl.renderScale` and `webgl.contentScale` in (0, 1].
  * The mirror bands and the centre body are rendered into separate offscreen
  * targets at their own scales, then composited with linear filtering onto the
