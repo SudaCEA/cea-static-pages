@@ -148,6 +148,20 @@ function parseChromeVersion(userAgent) {
   };
 }
 
+/**
+ * Which engine family a UA belongs to, for the `backdrop-filter` band check.
+ * iOS browsers all report AppleWebKit, so `CriOS`, `FxiOS` and `EdgiOS` have to
+ * be classified as WebKit rather than as their desktop counterparts.
+ */
+function detectBandsEngine(userAgent) {
+  const ua = String(userAgent || '');
+  if (/\b(?:HeadlessChrome|Chrome|Chromium|Edg|OPR)\/\d+/.test(ua)) return 'chromium';
+  if (/\b(?:FxiOS|CriOS|EdgiOS)\/\d+/.test(ua)) return 'webkit';
+  if (/\bFirefox\/\d+/.test(ua) || /Gecko\/\d{8}/.test(ua)) return 'gecko';
+  if (/AppleWebKit\//.test(ua)) return 'webkit';
+  return 'unknown';
+}
+
 function preflightIssue(code, message, url) {
   const issue = { code, message };
   if (url) issue.url = url;
@@ -735,7 +749,35 @@ class SvgBackend {
     frame.style.transformOrigin = '';
     this._clipAroundContent(layout);
 
+    // A content rectangle that fills the stage leaves no band to mirror. The
+    // whole filter chain would be a no-op (zero displacement, an empty mask)
+    // and the mask map alone would rasterize a full-viewport PNG, so skip the
+    // backdrop layer entirely. Pages use this for engines that cannot render
+    // the feImage-based bands at all.
+    const hasBands = layout.ax > 0.5 || layout.ay > 0.5 ||
+      layout.ax + layout.aw < layout.width - 0.5 ||
+      layout.ay + layout.ah < layout.height - 0.5;
+    this._hasBands = hasBands;
+    if (this.glass) {
+      setVendorBackdrop(
+        this.glass,
+        hasBands ? `url(#${this.mirror._id})` : 'none'
+      );
+    }
+
     this._updateFilterRegion(surface);
+    if (!hasBands) {
+      this._mirrorMap = null;
+      this._mirrorScale = 0;
+      this._mirrorSize = null;
+      this._maskSize = null;
+      this._setImage(this.feMirror, '');
+      this._setImage(this.feMask, '');
+      this._updateAttrs(surface, filter);
+      this._mapInfo = { mirror: 'none', mask: 'none' };
+      return;
+    }
+
     this._mirrorScale = this._mapScale(surface, dpr);
     this._mirrorMap = makeMirrorMap(surface, this._mirrorScale);
     this._mirrorSize = {
@@ -801,10 +843,18 @@ class SvgBackend {
       image.setAttribute('preserveAspectRatio', 'none');
     }
 
+    this.feBlur.setAttribute('stdDeviation', filter.blur.toFixed(3));
+    if (!this._mirrorMap) {
+      // No bands: the filter is detached from the glass, so the displacement
+      // primitives only need to stay valid, not meaningful.
+      this.feOffset.setAttribute('dx', '0');
+      this.feOffset.setAttribute('dy', '0');
+      this.feWarp.setAttribute('scale', '0');
+      return;
+    }
     this.feOffset.setAttribute('dx', this._mirrorMap.bias.toFixed(4));
     this.feOffset.setAttribute('dy', this._mirrorMap.bias.toFixed(4));
     this.feWarp.setAttribute('scale', this._mirrorMap.scale.toFixed(4));
-    this.feBlur.setAttribute('stdDeviation', filter.blur.toFixed(3));
   }
 
   _updateMask(layout, filter, dpr) {
@@ -2331,6 +2381,63 @@ class Mirror extends EventTarget {
  *   summary: string
  * }}
  */
+/**
+ * Probe whether `backdrop-filter: url(#filter)` can sample SVG filter
+ * primitives such as feImage and feDisplacementMap — that is, whether the SVG
+ * backend's mirror bands can paint at all.
+ *
+ * Chromium can; Gecko silently drops those primitives (bug 1896504, duplicate
+ * 1972363) and WebKit does not implement url() backdrop filters (bug 245510).
+ * Pages use a failing result to render the content full-bleed instead of
+ * leaving empty margins where the bands would be.
+ *
+ * A `userAgent` override makes the decision purely UA-based, which lets probes
+ * assert the table without running the other engines.
+ */
+export function checkMirrorBandsSupport(options = {}) {
+  const opts = options && typeof options === 'object' ? options : {};
+  const override = typeof opts.userAgent === 'string' ? opts.userAgent : null;
+  const userAgent = override === null
+    ? (typeof navigator !== 'undefined' ? navigator.userAgent : '')
+    : override;
+
+  let engine = detectBandsEngine(userAgent);
+  // Belt and braces for a masked UA: `-moz-element()` only exists in Gecko.
+  if (engine !== 'gecko' && override === null &&
+      typeof CSS !== 'undefined' && typeof CSS.supports === 'function' &&
+      CSS.supports('background-image', '-moz-element(#mirror-probe)')) {
+    engine = 'gecko';
+  }
+
+  const issues = {
+    gecko: {
+      code: 'gecko-backdrop-feimage',
+      message:
+        'Gecko drops feImage / feDisplacementMap inside backdrop-filter, so the ' +
+        'SVG backend cannot paint the mirror bands.',
+      url: 'https://bugzilla.mozilla.org/show_bug.cgi?id=1896504'
+    },
+    webkit: {
+      code: 'webkit-backdrop-url',
+      message:
+        'WebKit does not implement url() backdrop filters, so the SVG backend ' +
+        'cannot paint the mirror bands.',
+      url: 'https://bugs.webkit.org/show_bug.cgi?id=245510'
+    }
+  };
+  const issue = issues[engine] || null;
+
+  return {
+    ok: issue === null,
+    engine,
+    userAgent,
+    issue,
+    summary: issue
+      ? issue.message
+      : 'The backdrop-filter SVG chain can paint the mirror bands.'
+  };
+}
+
 export function checkHtmlInCanvasSupport(options = {}) {
   const opts = options && typeof options === 'object' ? options : {};
   const minimum = parseVersion(

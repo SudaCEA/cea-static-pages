@@ -2049,7 +2049,7 @@
   </div>
 
 <script type="module">
-  import { createMirror, checkHtmlInCanvasSupport } from '../js/effects/mirror.js';
+  import { createMirror, checkHtmlInCanvasSupport, checkMirrorBandsSupport } from '../js/effects/mirror.js';
   import { fadeIn, fadeOut } from '../js/effects/fade.js';
   import { createParallax } from '../js/effects/parallax.js';
   import { loadThreeBundle } from '../libs/three/three-bundle-loader.js';
@@ -3842,6 +3842,7 @@
   let mirror = null;
   let field = null;
   let preflight = null;
+  let bandSupport = null;
   let questionResolve = null;
   let questionCancelValue = 'close';
   let questionFocusTimer = 0;
@@ -3858,6 +3859,7 @@
     get rankingData() { return rankingData; },
     deck: deckApi,
     get preflight() { return preflight; },
+    get bandSupport() { return bandSupport; },
     get ready() { return mirror !== null; },
     getState: () => mirror?.getState() ?? null
   };
@@ -4058,6 +4060,19 @@
   }
 
   function unsupportedCopy(result) {
+    if (bandSupport?.ok === false) {
+      return {
+        title: '当前浏览器不支持镜面倒影',
+        body:
+          '本页四周的倒影依赖 backdrop-filter 中的 SVG 位移贴图，' +
+          '当前浏览器尚未实现这一能力，页面会以全屏、无倒影的方式显示。\n\n' +
+          '若希望看到完整的镜面材质，请使用兼容的 Chrome 浏览器，' +
+          '并启用 chrome://flags/#canvas-draw-element 实验特性。',
+        note: bandSupport.issue?.message || result.summary,
+        actions: [{ label: '全屏继续', value: 'close', kind: 'primary' }],
+        cancelValue: 'close'
+      };
+    }
     return {
       title: '当前使用 SVG 后端',
       body:
@@ -4098,6 +4113,12 @@
       mirror = null;
     }
 
+    // Engines without feImage-in-backdrop-filter cannot paint the bands, so the
+    // SVG backend renders the content full-bleed instead of leaving four empty
+    // margins around it.
+    const fullBleed = mode === 'svg' && bandSupport?.ok === false;
+    document.body.dataset.mirrorLayout = fullBleed ? 'fullbleed' : 'banded';
+
     setBootStatus(
       mode === 'webgl' ? 'STARTING WEBGL' : 'STARTING SVG',
       mode === 'webgl'
@@ -4109,7 +4130,7 @@
       container: stage,
       content: art,
       mode,
-      contentSize: { width: '72%', height: '72%' },
+      contentSize: fullBleed ? { width: '100%', height: '100%' } : { width: '72%', height: '72%' },
       contentFit: 'fill',
       // The solid content surface owns the centre fill.
       background: SURFACE.center,
@@ -4235,6 +4256,7 @@
     }
 
     preflight = result;
+    bandSupport = checkMirrorBandsSupport();
 
     if (!result.supported) {
       setBootProgress(1, 'PREFLIGHT', 'HTML-in-Canvas is unavailable; preparing SVG');

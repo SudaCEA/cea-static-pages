@@ -50,7 +50,7 @@ ellia-pages/
 4. 支持但版本不兼容或无法识别：在加载层内显示方框面板，让用户选择继续 WebGL 或回退 SVG。
 5. 不支持 HTML-in-Canvas：自动回退 SVG，并在加载层内提示可换用兼容 Chrome 并启用实验特性。
 6. 加载层使用白底黑字、无圆角方框；加载层与预检面板都居中。预检出现时加载进度淡出、面板淡入（250ms），最终加载层以 250ms 淡出；在预检面板被回答或关闭前，加载层不会移除。
-7. 内容区宽高各为页面的 72%；`mirror.js` 的共享 `_relayout()` 统一把内容矩形量化到整数设备像素，误差小于 1 个 CSS 像素。
+7. 内容区宽高各为页面的 72%（不支持镜面倒影的浏览器改为铺满整个视口，见「浏览器兼容与已知限制」）；`mirror.js` 的共享 `_relayout()` 统一把内容矩形量化到整数设备像素，误差小于 1 个 CSS 像素。
 8. 内容区包含一个嵌套 Canvas 2D canvas（`content-field.js`）和一个五页幻灯片 deck：canvas 每帧填充实心 `center` 色并绘制从底部上升的暗色粒子；deck 直接位于 `#art` 内，因此文字、标题和分隔线都会参与镜像。canvas 不是 drawable 根，使用 `devicePixelRatio` 上限 2 的 backing store，不使用 CSS transform/filter。
 9. 内容场第一帧渲染完成后才移除加载层；Canvas 2D 不可用时保留静态 `center` 色背景并跳过粒子场，deck 仍正常显示，mirror 仍正常挂载。
 10. WebGL 默认使用 `renderScale: 1` 的 direct pass，镜像和中心内容在同一 1x pass 中完成，不再产生 0.5x 合成缝。低于 1 的 composite 路径仍保留：它使用 2 device px full-res edge skirt，用 body 纹理边缘像素覆盖低分辨率上采样缝。DOM seam guard 已移除。
@@ -69,6 +69,8 @@ SVG 后端的镜像是「`backdrop-filter: url(#filter)` + `feImage` 位移贴�
 - **上游**：Gecko 缺 `feImage` / `feDisplacementMap` 的加速实现见 [bug 1896504](https://bugzilla.mozilla.org/show_bug.cgi?id=1896504)（NEW，P2，重复单 [1972363](https://bugzilla.mozilla.org/show_bug.cgi?id=1972363)；Mozilla 开发者的原话是“backdrop-filter 不支持绘制非 GPU 加速的滤镜，会退回 blob 失败”）；WebKit 见 [bug 245510](https://bugs.webkit.org/show_bug.cgi?id=245510)（NEW，P2，2026 年 7 月已有修复 PR 未合并）。
 - **不是挂载方式的问题**：同一份 `feImage` 用普通 `filter:` 应用时 Firefox 正常渲染（那条路有 blob 回退）。本机探针确认：`feImage` 作为 backdrop 滤镜时，data URI、blob URL、同文档元素引用三种挂载全部渲染为空；换成 `feFlood` 的同结构滤镜则正常。所以 base64 → blob 的替换无效，`filterUnits` / 区域大小也不是原因（`feFlood` 用同样的整屏 `userSpaceOnUse` 区域照常着色）。
 - **本版不做引擎特化实现**：理论上可以给 Gecko 加一条 `-moz-element(#content)` + 翻转 + `mask-image` 渐隐 + `blur()` 的反射层（本机验证过效果与 WebGL 后端几何一致），但那会引入 Gecko 专属合成路径与额外重绘成本；当前决定保持单一后端实现，等上游修复。
+- **全屏 fallback**：启动时用 `checkMirrorBandsSupport()` 判定这条 backdrop 链路是否可用（Gecko 用 `-moz-element` 特性探测兜底 UA 伪装，WebKit 按引擎识别；iOS 上的 `CriOS` / `FxiOS` / `EdgiOS` 都按 WebKit 处理）。判定不可用时：预检面板换成「当前浏览器不支持镜面倒影」并提示改用 Chrome，`contentSize` 从 `72% × 72%` 换成 `100% × 100%`，内容铺满视口，`body[data-mirror-layout="fullbleed"]` 可供 CSS 与探针识别；同时 SVG 后端在 margin 为 0 时直接跳过位移贴图与蒙版（否则每次 resize 都要光栅化一张整屏 PNG），玻璃层也不挂 backdrop-filter。
+- **全屏 fallback 的已知副作用**：封面 150% 的 sideview 插画和详情页右侧操作栏原本靠外侧 14% 留白吸收溢出，铺满后会被视口边缘裁掉；这一轮先接受，后续如需修可在 `body[data-mirror-layout="fullbleed"]` 下单独收边。
 - **Firefox 下的实际表现**：deck、翻页、淡入淡出、粒子场、象限色片都正常，只是四周没有倒影带；页面没有降级提示，也不需要降级提示。
 - **排查方法提醒**：Firefox 的截图接口（`--headless --screenshot`、CDP/BiDi `captureScreenshot`）不走合成器，`backdrop-filter` 在那条路上完全不渲染（连 `blur()` 都没有）。要判断滤镜是否生效必须抓真实屏幕（桌面截图），否则会把“截图路径不画滤镜”误判成“滤镜全挂”。
 
@@ -402,6 +404,9 @@ def postbuild(ctx):
 
 # origin trial token（解码 origin/feature/到期时间 + 无 flag 启动冒烟）
 .\.venv\Scripts\python.exe gamejam\tools\probe_origin_trial.py
+
+# 倒影能力判定 + 全屏 fallback（UA 判定表 / Chromium 保持 72% / 伪装 Gecko 走全屏）
+.\.venv\Scripts\python.exe gamejam\tools\probe_bands_fallback.py
 
 # 收尾页视觉抽查（截图写入 .dsh/，可加 --large / --backend=svg）
 .\.venv\Scripts\python.exe gamejam\tools\shot_end.py

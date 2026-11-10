@@ -147,7 +147,7 @@ The `mirror-2610` page SHALL carry a Chrome origin trial token for the `HTMLInCa
 
 ### Requirement: Content sizing
 
-The content region SHALL target 72% of the stage width and 72% of the stage height.
+The content region SHALL target 72% of the stage width and 72% of the stage height, and SHALL fill the stage at 100% × 100% on engines that cannot render the mirror bands.
 
 The actual CSS content size SHALL remain within 1 CSS pixel of the target after device-pixel snapping.
 
@@ -156,6 +156,13 @@ The actual CSS content size SHALL remain within 1 CSS pixel of the target after 
 - **WHEN** the page is viewed at 1440×900 CSS pixels
 - **THEN** the content target is `1036.8 × 648`
 - **AND** the rendered CSS content size is `1036 × 648`
+
+#### Scenario: Full-bleed fallback
+
+- **WHEN** the browser cannot paint the mirror bands (see SVG backend engine coverage)
+- **THEN** the content target is the full stage and the mirror renders no bands
+- **AND** the page marks its layout as full-bleed for styling and diagnostics
+- **AND** the deck keeps the same container-relative typography, so the composition scales with the stage
 
 #### Scenario: Resize updates the content
 
@@ -221,19 +228,23 @@ Both backends SHALL use `blur: 2.00` and `feather: 72`.
 
 The SVG backend SHALL render its reflections through a `backdrop-filter: url(#…)` reference whose primitive chain includes `feImage` (displacement map and feather mask) and `feDisplacementMap`.
 
-That chain SHALL be documented as Chromium-only, and the page SHALL NOT ship an engine-specific reflection fallback in this revision. The page SHALL stay fully usable in affected engines: only the reflected bands are absent.
+The page SHALL detect the gap before mounting and render the content full-bleed instead of leaving empty margins. The preflight panel SHALL name the missing capability and recommend Chrome. No engine-specific reflection fallback SHALL ship in this revision.
 
 #### Scenario: Firefox renders everything except the bands
 
 - **WHEN** the page is rendered by Firefox and the SVG backend is active
 - **THEN** the deck, paging, fades, particle field, and quadrant colour filters all render normally
 - **AND** the mirror bands outside the content rectangle stay flat, because Gecko drops the non-GPU-accelerated `feImage` / `feDisplacementMap` primitives (mozilla bug 1896504, duplicate 1972363)
+- **AND** the content fills the viewport instead of leaving the four empty margins
+- **AND** the preflight panel reports that the mirror reflection is unsupported and recommends Chrome
 - **AND** no error, fallback banner, or console error is produced
+- **AND** the mirror skips the displacement and mask maps entirely, so no full-viewport filter rasterization happens
 
 #### Scenario: Safari renders no url() backdrop filter
 
 - **WHEN** the page is rendered by a WebKit browser
 - **THEN** neither the mirror bands nor the quadrant colour filters render, because `backdrop-filter: url(#…)` is not implemented (webkit bug 245510)
+- **AND** the content fills the viewport and the preflight panel reports the missing reflection
 - **AND** the rest of the deck stays usable
 
 #### Scenario: Chromium renders the bands
